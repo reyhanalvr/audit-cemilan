@@ -8,3 +8,4 @@ dist
 *.log
 *.swp
 sales.db
+server-copy.js
