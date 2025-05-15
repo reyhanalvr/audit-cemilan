@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Penjualan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+  <!-- Navigasi -->
+  <nav class="bg-blue-500 p-4">
+    <div class="container mx-auto flex justify-between">
+      <div class="text-white text-lg font-semibold">Manajemen Penjualan</div>
+      <div class="space-x-4">
+        <a href="index.html" class="text-white hover:underline">Penjualan</a>
+        <a href="stock.html" class="text-white hover:underline">Stok Barang</a>
+        <a href="production.html" class="text-white hover:underline">Catatan Produksi</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold text-center mb-6">Audit Penjualan Website</h1>
+    
+    <!-- Formulir Input -->
+    <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Tambah Data Penjualan</h2>
+      <form id="salesForm" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label for="date" class="block mb-1">Tanggal</label>
+          <input type="date" id="date" class="w-full border p-2 rounded" required>
+        </div>
+        <div>
+          <label for="saleType" class="block mb-1">Tipe Penjualan</label>
+          <select id="saleType" class="w-full border p-2 rounded" required>
+            <option value="onhand">On Hand</option>
+            <option value="reseller">Reseller</option>
+          </select>
+        </div>
+        <div>
+          <label for="product" class="block mb-1">Produk</label>
+          <select id="product" class="w-full border p-2 rounded" required>
+            <option value="" disabled selected>Pilih produk</option>
+            <option value="Basreng 100Gr" data-price="10000" data-reseller="9000">Basreng 100Gr</option>
+            <option value="Basreng 200Gr" data-price="15500" data-reseller="14500">Basreng 200Gr</option>
+            <option value="Makaroni 100Gr" data-price="10000" data-reseller="9000">Makaroni 100Gr</option>
+            <option value="Makaroni 200Gr" data-price="13000" data-reseller="12000">Makaroni 200Gr</option>
+            <option value="Keripik Kaca 50Gr" data-price="8000" data-reseller="7000">Keripik Kaca 50Gr</option>
+            <option value="Kripik Kaca 110Gr" data-price="12000" data-reseller="11000">Kripik Kaca 110Gr</option>
+            <option value="Singkong 100Gr" data-price="10000" data-reseller="9000">Singkong 100Gr</option>
+          </select>
+        </div>
+        <div>
+          <label for="branch" class="block mb-1">Cabang</label>
+          <select id="branch" class="w-full border p-2 rounded" required>
+            <option value="" disabled selected>Pilih cabang</option>
+            <option value="Jablay 1 (Zhidan)">Jablay 1 (Zhidan)</option>
+            <option value="Jablay 2 (Reyhan)">Jablay 2 (Reyhan)</option>
+            <option value="Jablay 3 (Tangsel)">Jablay 3 (Tangsel)</option>
+          </select>
+        </div>
+        <div>
+          <label for="unitPrice" class="block mb-1">Harga Satuan (Rp)</label>
+          <input type="number" id="unitPrice" class="w-full border p-2 rounded bg-gray-100" readonly required>
+        </div>
+        <div>
+          <label for="quantity" class="block mb-1">Jumlah</label>
+          <input type="number" id="quantity" class="w-full border p-2 rounded" min="1" placeholder="Masukkan jumlah" required>
+        </div>
+        <div>
+          <label for="paymentMethod" class="block mb-1">Metode Pembayaran</label>
+          <select id="paymentMethod" class="w-full border p-2 rounded" required>
+            <option value="Transfer Bank">Transfer Bank</option>
+            <option value="Cash">Cash</option>
+          </select>
+        </div>
+        <div>
+          <label for="paymentStatus" class="block mb-1">Status Pembayaran</label>
+          <select id="paymentStatus" class="w-full border p-2 rounded" required>
+            <option value="Lunas">Lunas</option>
+            <option value="Belum Lunas">Belum Lunas</option>
+          </select>
+        </div>
+        <div class="sm:col-span-3">
+          <label for="description" class="block mb-1">Deskripsi</label>
+          <textarea id="description" class="w-full border p-2 rounded" rows="3" placeholder="Masukkan deskripsi (opsional)"></textarea>
+        </div>
+        <div class="sm:col-span-3">
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Tambah Penjualan</button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Filter -->
+    <div class="mb-4 flex flex-col sm:flex-row gap-4">
+      <div>
+        <label for="startDate" class="mr-2">Tanggal Mulai:</label>
+        <input type="date" id="startDate" class="border p-2 rounded">
+      </div>
+      <div>
+        <label for="endDate" class="mr-2">Tanggal Akhir:</label>
+        <input type="date" id="endDate" class="border p-2 rounded">
+      </div>
+      <div>
+        <label for="search" class="mr-2">Cari ID Transaksi:</label>
+        <input type="text" id="search" class="border p-2 rounded" placeholder="Masukkan ID Transaksi">
+      </div>
+      <div>
+        <label for="paymentStatusFilter" class="mr-2">Filter Status Pembayaran:</label>
+        <select id="paymentStatusFilter" class="border p-2 rounded">
+          <option value="all">Semua</option>
+          <option value="Lunas">Lunas</option>
+          <option value="Belum Lunas">Belum Lunas</option>
+        </select>
+      </div>
+      <div>
+        <label for="branchFilter" class="mr-2">Filter Cabang:</label>
+        <select id="branchFilter" class="border p-2 rounded">
+          <option value="all">Semua Cabang</option>
+          <option value="Jablay 1 (Zhidan)">Jablay 1 (Zhidan)</option>
+          <option value="Jablay 2 (Reyhan)">Jablay 2 (Reyhan)</option>
+          <option value="Jablay 3 (Tangsel)">Jablay 3 (Tangsel)</option>
+        </select>
+      </div>
+      <div>
+        <button id="resetFilter" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Reset Filter</button>
+      </div>
+    </div>
+    
+    <!-- Grafik Penjualan Harian (Bar Chart) -->
+    <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Grafik Penjualan Harian</h2>
+      <canvas id="salesChart" class="w-full h-64"></canvas>
+    </div>
+
+    <!-- Grafik Barang Keluar (Line Chart) -->
+    <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Grafik Total Barang Keluar</h2>
+      <canvas id="quantityChart" class="w-full h-64"></canvas>
+    </div>
+    
+    <!-- Tabel Penjualan -->
+    <div class="overflow-x-auto">
+      <table id="salesTable" class="w-full bg-white shadow-md rounded-lg">
+        <thead>
+          <tr class="bg-gray-200 text-left">
+            <th class="p-3">Tanggal</th>
+            <th class="p-3">ID Transaksi</th>
+            <th class="p-3">Produk</th>
+            <th class="p-3">Cabang</th>
+            <th class="p-3">Jumlah</th>
+            <th class="p-3">Harga Satuan</th>
+            <th class="p-3">Total</th>
+            <th class="p-3">Metode Pembayaran</th>
+            <th class="p-3">Status</th>
+            <th class="p-3">Tipe Penjualan</th>
+            <th class="p-3">Status Pembayaran</th>
+            <th class="p-3">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="salesTableBody"></tbody>
+      </table>
+      <p id="noDataMessage" class="text-red-600 text-center mt-2 hidden">Tidak ada transaksi pada rentang tanggal ini</p>
+    </div>
+    
+    <!-- Ringkasan -->
+    <div class="mt-6 bg-white p-4 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold">Ringkasan</h2>
+      <div class="flex justify-between">
+        <div>
+          <p id="totalSales" class="mt-2">Total Penjualan: Rp0</p>
+          <p id="totalPaid" class="mt-2">Total Lunas: Rp0</p>
+          <p id="totalUnpaid" class="mt-2">Total Belum Lunas: Rp0</p>
+        </div>
+        <div class="text-right">
+          <p id="totalATM" class="mt-2">Total Uang di ATM: Rp0</p>
+          <p id="totalCash" class="mt-2">Total Uang di Cash: Rp0</p>
+        </div>
+      </div>
+      <p id="anomaly" class="mt-2 text-red-600"></p>
+    </div>
+  </div>
+
+  <!-- Modal untuk Edit -->
+  <div id="editModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md">
+      <h2 class="text-xl font-semibold mb-4">Edit Transaksi</h2>
+      <form id="editForm">
+        <input type="hidden" id="editId">
+        <div class="mb-4">
+          <label for="editDate" class="block mb-1">Tanggal</label>
+          <input type="date" id="editDate" class="w-full border p-2 rounded" required>
+        </div>
+        <div class="mb-4">
+          <label for="editSaleType" class="block mb-1">Tipe Penjualan</label>
+          <select id="editSaleType" class="w-full border p-2 rounded" required>
+            <option value="onhand">On Hand</option>
+            <option value="reseller">Reseller</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="editProduct" class="block mb-1">Produk</label>
+          <select id="editProduct" class="w-full border p-2 rounded" required>
+            <option value="Basreng 100Gr">Basreng 100Gr</option>
+            <option value="Basreng 200Gr">Basreng 200Gr</option>
+            <option value="Makaroni 100Gr">Makaroni 100Gr</option>
+            <option value="Makaroni 200Gr">Makaroni 200Gr</option>
+            <option value="Keripik Kaca 50Gr">Keripik Kaca 50Gr</option>
+            <option value="Kripik Kaca 110Gr">Kripik Kaca 110Gr</option>
+            <option value="Singkong 100Gr">Singkong 100Gr</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="editBranch" class="block mb-1">Cabang</label>
+          <select id="editBranch" class="w-full border p-2 rounded" required>
+            <option value="Jablay 1 (Zhidan)">Jablay 1 (Zhidan)</option>
+            <option value="Jablay 2 (Reyhan)">Jablay 2 (Reyhan)</option>
+            <option value="Jablay 3 (Tangsel)">Jablay 3 (Tangsel)</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="editQuantity" class="block mb-1">Jumlah</label>
+          <input type="number" id="editQuantity" class="w-full border p-2 rounded" min="1" required>
+        </div>
+        <div class="mb-4">
+          <label for="editUnitPrice" class="block mb-1">Harga Satuan (Rp)</label>
+          <input type="number" id="editUnitPrice" class="w-full border p-2 rounded" min="0" required>
+        </div>
+        <div class="mb-4">
+          <label for="editPaymentMethod" class="block mb-1">Metode Pembayaran</label>
+          <select id="editPaymentMethod" class="w-full border p-2 rounded" required>
+            <option value="Transfer Bank">Transfer Bank</option>
+            <option value="Cash">Cash</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="editStatus" class="block mb-1">Status</label>
+          <select id="editStatus" class="w-full border p-2 rounded" required>
+            <option value="Selesai">Selesai</option>
+            <option value="Dikembalikan">Dikembalikan</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="editPaymentStatus" class="block mb-1">Status Pembayaran</label>
+          <select id="editPaymentStatus" class="w-full border p-2 rounded" required>
+            <option value="Lunas">Lunas</option>
+            <option value="Belum Lunas">Belum Lunas</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="editDescription" class="block mb-1">Deskripsi</label>
+          <textarea id="editDescription" class="w-full border p-2 rounded" rows="3" placeholder="Masukkan deskripsi (opsional)"></textarea>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="cancelEdit" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Batal</button>
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let salesChart;
+    let quantityChart;
+
+    // Buat elemen tooltip secara global sebelum chart diinisialisasi
+    const tooltipEl = document.createElement('div');
+    tooltipEl.id = 'chartjs-tooltip';
+    tooltipEl.style.background = 'rgba(0, 0, 0, 0.7)';
+    tooltipEl.style.borderRadius = '3px';
+    tooltipEl.style.color = 'white';
+    tooltipEl.style.opacity = '0';
+    tooltipEl.style.pointerEvents = 'none';
+    tooltipEl.style.position = 'absolute';
+    tooltipEl.style.transform = 'translate(-50%, 0)';
+    tooltipEl.style.transition = 'all .1s ease';
+    tooltipEl.style.padding = '5px 10px';
+    tooltipEl.style.zIndex = '9999';
+    tooltipEl.style.maxWidth = '300px';
+    tooltipEl.style.whiteSpace = 'normal';
+    document.body.appendChild(tooltipEl);
+
+    // Fungsi untuk format Rupiah
+    function formatRupiah(number) {
+      return `Rp${number.toLocaleString('id-ID')}`;
+    }
+
+    // Fungsi untuk generate ID transaksi
+    function generateTransactionId(length) {
+      return `TRX${String(length + 1).padStart(3, '0')}`;
+    }
+
+    // Fungsi untuk mengambil data penjualan dari backend
+    async function fetchSales() {
+      try {
+        const response = await fetch('http://localhost:3000/api/sales');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        console.log('Data penjualan dari backend:', data);
+        return data;
+      } catch (error) {
+        console.error('Error fetching sales:', error);
+        alert('Gagal mengambil data penjualan. Pastikan server berjalan.');
+        return [];
+      }
+    }
+
+    // Fungsi untuk mengambil data stok dari backend
+    async function fetchStock() {
+      try {
+        const response = await fetch('http://localhost:3000/api/stock');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        console.log('Data stok dari backend:', data);
+        return data;
+      } catch (error) {
+        console.error('Error fetching stock:', error);
+        alert('Gagal mengambil data stok. Pastikan server berjalan.');
+        return [];
+      }
+    }
+
+    // Fungsi untuk filter data berdasarkan semua kriteria
+    function applyFilters(sales) {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const paymentStatus = document.getElementById('paymentStatusFilter').value;
+      const branchFilter = document.getElementById('branchFilter').value;
+      const searchQuery = document.getElementById('search').value.toUpperCase();
+
+      let filteredData = sales;
+
+      if (startDate && endDate && startDate > endDate) {
+        alert('Tanggal Mulai harus sebelum Tanggal Akhir.');
+        return sales;
+      }
+
+      if (startDate) filteredData = filteredData.filter(item => item.date >= startDate);
+      if (endDate) filteredData = filteredData.filter(item => item.date <= endDate);
+      if (paymentStatus !== 'all') filteredData = filteredData.filter(item => item.paymentStatus === paymentStatus);
+      if (branchFilter !== 'all') filteredData = filteredData.filter(item => item.branch === branchFilter);
+      if (searchQuery) filteredData = filteredData.filter(item => item.id.includes(searchQuery));
+
+      return filteredData;
+    }
+
+    // Fungsi untuk mengelompokkan produk per tanggal untuk tooltip
+    function getProductDetails(data, date) {
+      const items = data.filter(item => item.date === date);
+      if (items.length === 0) return 'Tidak ada detail produk';
+      const listItems = items.map(item => `<li>${item.product}: ${item.quantity} unit(s) - Status Pembayaran: ${item.paymentStatus} - Cabang: ${item.branch}</li>`).join('');
+      return `<ul>${listItems}</ul>`;
+    }
+
+    // Fungsi untuk render tabel
+    function renderTable(data) {
+      const tbody = document.getElementById('salesTableBody');
+      const noDataMessage = document.getElementById('noDataMessage');
+      tbody.innerHTML = '';
+      if (data.length === 0) {
+        noDataMessage.classList.remove('hidden');
+      } else {
+        noDataMessage.classList.add('hidden');
+        data.forEach(item => {
+          const rowClass = item.paymentStatus === 'Lunas' ? 'bg-green-200' : 
+                           item.paymentStatus === 'Belum Lunas' ? 'bg-red-200' : '';
+          const row = document.createElement('tr');
+          row.className = rowClass;
+          row.innerHTML = `
+            <td class="p-3">${item.date}</td>
+            <td class="p-3">${item.id}</td>
+            <td class="p-3">${item.product}</td>
+            <td class="p-3">${item.branch}</td>
+            <td class="p-3">${item.quantity}</td>
+            <td class="p-3">${formatRupiah(item.unitPrice)}</td>
+            <td class="p-3">${formatRupiah(item.total)}</td>
+            <td class="p-3">${item.paymentMethod}</td>
+            <td class="p-3">${item.status}</td>
+            <td class="p-3">${item.saleType || 'Tidak Diketahui'}</td>
+            <td class="p-3">${item.paymentStatus || 'Tidak Diketahui'}</td>
+            <td class="p-3">
+              <button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 mr-2" data-id="${item.id}">Edit</button>
+              <button class="deleteBtn bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" data-id="${item.id}">Hapus</button>
+            </td>
+          `;
+          if (item.description) {
+            const descRow = document.createElement('tr');
+            descRow.className = rowClass;
+            descRow.innerHTML = `
+              <td colspan="12" class="p-3 pl-6 text-gray-600">
+                • ${item.description}
+              </td>
+            `;
+            tbody.appendChild(row);
+            tbody.appendChild(descRow);
+          } else {
+            tbody.appendChild(row);
+          }
+        });
+      }
+
+      const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalPaid = data.filter(item => item.paymentStatus === 'Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalUnpaid = data.filter(item => item.paymentStatus === 'Belum Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalATM = data.filter(item => item.paymentMethod === 'Transfer Bank').reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalCash = data.filter(item => item.paymentMethod === 'Cash').reduce((sum, item) => sum + (item.total || 0), 0);
+
+      document.getElementById('totalSales').textContent = `Total Penjualan: ${formatRupiah(total)}`;
+      document.getElementById('totalPaid').textContent = `Total Lunas: ${formatRupiah(totalPaid)}`;
+      document.getElementById('totalUnpaid').textContent = `Total Belum Lunas: ${formatRupiah(totalUnpaid)}`;
+      document.getElementById('totalATM').textContent = `Total Uang di ATM: ${formatRupiah(totalATM)}`;
+      document.getElementById('totalCash').textContent = `Total Uang di Cash: ${formatRupiah(totalCash)}`;
+      document.getElementById('anomaly').textContent = '';
+
+      updateCharts(data);
+    }
+
+    // Fungsi untuk update grafik
+    function updateCharts(data) {
+      const dates = [...new Set(data.map(item => item.date))].sort();
+
+      const totals = dates.map(date => data.filter(item => item.date === date).reduce((sum, item) => sum + (item.total || 0), 0));
+      const quantities = dates.map(date => data.filter(item => item.date === date).reduce((sum, item) => sum + (item.quantity || 0), 0));
+
+      if (salesChart) salesChart.destroy();
+      const salesCtx = document.getElementById('salesChart').getContext('2d');
+      salesChart = new Chart(salesCtx, {
+        type: 'bar',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: 'Total Penjualan (Rp)',
+            data: totals,
+            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: value => formatRupiah(value) }
+            }
+          }
+        }
+      });
+
+      if (quantityChart) quantityChart.destroy();
+      const quantityCtx = document.getElementById('quantityChart').getContext('2d');
+      quantityChart = new Chart(quantityCtx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: 'Total Barang Keluar',
+            data: quantities,
+            fill: false,
+            borderColor: 'rgba(255, 99, 132, 1)',
+            tension: 0.1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1 }
+            }
+          },
+          plugins: {
+            tooltip: {
+              enabled: false,
+              external: function(context) {
+                const { chart, tooltip } = context;
+
+                if (!tooltipEl) {
+                  console.error('Tooltip element not found or not created.');
+                  return;
+                }
+
+                if (tooltip.opacity === 0) {
+                  tooltipEl.style.opacity = '0';
+                  return;
+                }
+
+                if (!tooltip.dataPoints || tooltip.dataPoints.length === 0) {
+                  console.warn('No tooltip data points available:', tooltip);
+                  tooltipEl.innerHTML = '<div><p>Tidak ada data untuk ditampilkan</p></div>';
+                } else {
+                  const date = tooltip.dataPoints[0].label;
+                  console.log('Tooltip triggered for date:', date, 'with data:', tooltip.dataPoints[0]);
+                  const details = getProductDetails(data, date);
+                  tooltipEl.innerHTML = `
+                    <div>
+                      <p>Total Barang: ${tooltip.dataPoints[0].raw} unit(s)</p>
+                      <p>Detail Produk:</p>
+                      ${details}
+                    </div>
+                  `;
+                }
+
+                const position = chart.canvas.getBoundingClientRect();
+                const leftPosition = position.left + tooltip.caretX;
+                const topPosition = position.top + window.scrollY + tooltip.caretY + 10;
+                tooltipEl.style.left = leftPosition + 'px';
+                tooltipEl.style.top = topPosition + 'px';
+                tooltipEl.style.opacity = '1';
+
+                console.log('Tooltip position - Left:', leftPosition, 'Top:', topPosition);
+                console.log('Tooltip visibility - Opacity:', tooltipEl.style.opacity, 'Display:', tooltipEl.style.display);
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Isi harga otomatis saat produk dipilih atau tipe penjualan berubah
+    function updatePrice() {
+      const product = document.getElementById('product');
+      const saleType = document.getElementById('saleType').value;
+      const selected = product.options[product.selectedIndex];
+      if (selected.value) {
+        const price = saleType === 'reseller' ? selected.getAttribute('data-reseller') : selected.getAttribute('data-price');
+        document.getElementById('unitPrice').value = price || '';
+      }
+    }
+
+    document.getElementById('product').addEventListener('change', updatePrice);
+    document.getElementById('saleType').addEventListener('change', updatePrice);
+
+    // Handle submit formulir tambah dengan validasi stok
+    document.getElementById('salesForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const date = document.getElementById('date').value;
+      const saleType = document.getElementById('saleType').value;
+      const productSelect = document.getElementById('product');
+      const product = productSelect.options[productSelect.selectedIndex].text;
+      const branch = document.getElementById('branch').value;
+      const unitPrice = parseFloat(document.getElementById('unitPrice').value);
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const paymentMethod = document.getElementById('paymentMethod').value;
+      const paymentStatus = document.getElementById('paymentStatus').value;
+      const description = document.getElementById('description').value;
+
+      // Validasi stok untuk cabang tertentu
+      const stock = await fetchStock();
+      const stockItem = stock.find(item => item.product === product && item.branch === branch);
+      if (!stockItem || stockItem.quantity < quantity) {
+        alert(`Stok tidak mencukupi untuk ${product} di cabang ${branch}. Stok tersedia: ${stockItem ? stockItem.quantity : 0} unit.`);
+        return;
+      }
+
+      const total = quantity * unitPrice;
+
+      const sales = await fetchSales();
+      const newSale = {
+        date,
+        product,
+        branch,
+        quantity,
+        unitPrice,
+        total,
+        paymentMethod,
+        status: "Selesai",
+        saleType,
+        paymentStatus,
+        description
+      };
+
+      console.log('Data penjualan yang akan dikirim:', newSale);
+
+      try {
+        // Tambah transaksi penjualan
+        const salesResponse = await fetch('http://localhost:3000/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newSale)
+        });
+        if (!salesResponse.ok) {
+          const errorData = await salesResponse.json();
+          throw new Error(errorData.error || `HTTP error! Status: ${salesResponse.status}`);
+        }
+        const salesResult = await salesResponse.json();
+        console.log('Respons dari backend (penjualan):', salesResult);
+      } catch (error) {
+        console.error('Error saat mengirim data:', error);
+        alert(`Gagal menambahkan transaksi: ${error.message}`);
+        return;
+      }
+
+      const updatedSales = await fetchSales();
+      const filteredData = applyFilters(updatedSales);
+      renderTable(filteredData);
+      this.reset();
+      document.getElementById('unitPrice').value = '';
+    });
+
+    // Handle edit
+    document.addEventListener('click', async function(e) {
+      if (e.target.classList.contains('editBtn')) {
+        const id = e.target.dataset.id;
+        const sales = await fetchSales();
+        const sale = sales.find(item => item.id === id);
+
+        document.getElementById('editId').value = sale.id;
+        document.getElementById('editDate').value = sale.date;
+        document.getElementById('editSaleType').value = sale.saleType || 'onhand';
+        document.getElementById('editProduct').value = sale.product;
+        document.getElementById('editBranch').value = sale.branch;
+        document.getElementById('editQuantity').value = sale.quantity;
+        document.getElementById('editUnitPrice').value = sale.unitPrice;
+        document.getElementById('editPaymentMethod').value = sale.paymentMethod;
+        document.getElementById('editStatus').value = sale.status;
+        document.getElementById('editPaymentStatus').value = sale.paymentStatus || 'Lunas';
+        document.getElementById('editDescription').value = sale.description || '';
+
+        document.getElementById('editModal').classList.remove('hidden');
+      }
+
+      if (e.target.classList.contains('deleteBtn')) {
+        if (confirm('Yakin ingin menghapus transaksi ini?')) {
+          const id = e.target.dataset.id;
+          try {
+            // Hapus transaksi
+            const response = await fetch(`http://localhost:3000/api/sales/${id}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+            const updatedSales = await fetchSales();
+            const filteredData = applyFilters(updatedSales);
+            renderTable(filteredData);
+          } catch (error) {
+            console.error('Error saat menghapus:', error);
+            alert('Gagal menghapus transaksi.');
+          }
+        }
+      }
+    });
+
+    // Handle submit edit
+    document.getElementById('editForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const id = document.getElementById('editId').value;
+      const date = document.getElementById('editDate').value;
+      const saleType = document.getElementById('editSaleType').value;
+      const product = document.getElementById('editProduct').value;
+      const branch = document.getElementById('editBranch').value;
+      const quantity = parseInt(document.getElementById('editQuantity').value);
+      const unitPrice = parseFloat(document.getElementById('editUnitPrice').value);
+      const paymentMethod = document.getElementById('editPaymentMethod').value;
+      const status = document.getElementById('editStatus').value;
+      const paymentStatus = document.getElementById('editPaymentStatus').value;
+      const description = document.getElementById('editDescription').value;
+
+      const sales = await fetchSales();
+      const originalSale = sales.find(item => item.id === id);
+      const stock = await fetchStock();
+      const stockItem = stock.find(item => item.product === product && item.branch === branch);
+
+      // Hitung selisih jumlah untuk stok
+      const quantityDifference = quantity - originalSale.quantity;
+
+      if (quantityDifference > 0 && (!stockItem || stockItem.quantity < quantityDifference)) {
+        alert(`Stok tidak mencukupi untuk ${product} di cabang ${branch}. Stok tersedia: ${stockItem ? stockItem.quantity : 0} unit.`);
+        return;
+      }
+
+      const total = quantity * unitPrice;
+
+      const updatedSale = {
+        date,
+        product,
+        branch,
+        quantity,
+        unitPrice,
+        total,
+        paymentMethod,
+        status,
+        saleType,
+        paymentStatus,
+        description
+      };
+
+      console.log('Data edit yang akan dikirim:', updatedSale);
+
+      try {
+        // Update transaksi
+        const response = await fetch(`http://localhost:3000/api/sales/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedSale)
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+        }
+
+        const updatedSales = await fetchSales();
+        const filteredData = applyFilters(updatedSales);
+        renderTable(filteredData);
+        document.getElementById('editModal').classList.add('hidden');
+      } catch (error) {
+        console.error('Error saat mengedit:', error);
+        alert(`Gagal mengedit transaksi: ${error.message}`);
+      }
+    });
+
+    // Handle batal edit
+    document.getElementById('cancelEdit').addEventListener('click', function() {
+      document.getElementById('editModal').classList.add('hidden');
+    });
+
+    // Filter berdasarkan rentang tanggal
+    document.getElementById('startDate').addEventListener('change', async function() {
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderTable(filteredData);
+    });
+
+    document.getElementById('endDate').addEventListener('change', async function() {
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderTable(filteredData);
+    });
+
+    // Filter berdasarkan status pembayaran
+    document.getElementById('paymentStatusFilter').addEventListener('change', async function() {
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderTable(filteredData);
+    });
+
+    // Filter berdasarkan cabang
+    document.getElementById('branchFilter').addEventListener('change', async function() {
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderTable(filteredData);
+    });
+
+    // Pencarian berdasarkan ID Transaksi
+    document.getElementById('search').addEventListener('input', async function() {
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderTable(filteredData);
+    });
+
+    // Reset semua filter
+    document.getElementById('resetFilter').addEventListener('click', async function() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      document.getElementById('paymentStatusFilter').value = 'all';
+      document.getElementById('branchFilter').value = 'all';
+      document.getElementById('search').value = '';
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderTable(filteredData);
+    });
+
+    // Inisialisasi
+    async function init() {
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderTable(filteredData);
+    }
+    init();
+  </script>
+</body>
+</html>

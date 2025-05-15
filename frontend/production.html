@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catatan Produksi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #distributeModal {
+      z-index: 50;
+    }
+    #distributeModal .modal-content {
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .bg-yellow-200 {
+      background-color: #fefcbf;
+    }
+    .bg-green-200 {
+      background-color: #d1fae5;
+    }
+    details[open] summary {
+      background-color: #e0e7ff;
+    }
+    summary {
+      padding: 0.5rem;
+      border-radius: 0.375rem;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+  <nav class="bg-blue-500 p-4">
+    <div class="container mx-auto flex justify-between">
+      <div class="text-white text-lg font-semibold">Manajemen Penjualan</div>
+      <div class="space-x-4">
+        <a href="index.html" class="text-white hover:underline">Penjualan</a>
+        <a href="stock.html" class="text-white hover:underline">Stok Barang</a>
+        <a href="production.html" class="text-white hover:underline">Catatan Produksi</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold text-center mb-6">Catatan Produksi</h1>
+
+    <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Tambah Data Produksi</h2>
+      <form id="productionForm" class="grid grid-cols-1 gap-4">
+        <div>
+          <label for="date" class="block mb-1">Tanggal</label>
+          <input type="date" id="date" class="w-full border p-2 rounded" value="2025-05-15" required>
+        </div>
+        <div id="productItems">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="mb-2">
+              <label for="quantity_basreng100gr" class="block mb-1">Basreng 100Gr</label>
+              <input type="number" id="quantity_basreng100gr" class="w-full border p-2 rounded quantity-input" min="0" value="0" required>
+            </div>
+            <div class="mb-2">
+              <label for="quantity_basreng200gr" class="block mb-1">Basreng 200Gr</label>
+              <input type="number" id="quantity_basreng200gr" class="w-full border p-2 rounded quantity-input" min="0" value="0" required>
+            </div>
+            <div class="mb-2">
+              <label for="quantity_makaroni100gr" class="block mb-1">Makaroni 100Gr</label>
+              <input type="number" id="quantity_makaroni100gr" class="w-full border p-2 rounded quantity-input" min="0" value="0" required>
+            </div>
+            <div class="mb-2">
+              <label for="quantity_makaroni200gr" class="block mb-1">Makaroni 200Gr</label>
+              <input type="number" id="quantity_makaroni200gr" class="w-full border p-2 rounded quantity-input" min="0" value="0" required>
+            </div>
+            <div class="mb-2">
+              <label for="quantity_keripikkaca50gr" class="block mb-1">Keripik Kaca 50Gr</label>
+              <input type="number" id="quantity_keripikkaca50gr" class="w-full border p-2 rounded quantity-input" min="0" value="0" required>
+            </div>
+            <div class="mb-2">
+              <label for="quantity_keripikkaca110gr" class="block mb-1">Kripik Kaca 110Gr</label>
+              <input type="number" id="quantity_keripikkaca110gr" class="w-full border p-2 rounded quantity-input" min="0" value="0" required>
+            </div>
+            <div class="mb-2">
+              <label for="quantity_singkong100gr" class="block mb-1">Singkong 100Gr</label>
+              <input type="number" id="quantity_singkong100gr" class="w-full border p-2 rounded quantity-input" min="0" value="0" required>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label for="description" class="block mb-1">Deskripsi</label>
+          <textarea id="description" class="w-full border p-2 rounded" rows="3" placeholder="Masukkan deskripsi (opsional)"></textarea>
+        </div>
+        <div>
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Tambah Produksi</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="mb-4 flex flex-col sm:flex-row gap-4">
+      <div>
+        <label for="startDate" class="mr-2">Tanggal Mulai:</label>
+        <input type="date" id="startDate" class="border p-2 rounded">
+      </div>
+      <div>
+        <label for="endDate" class="mr-2">Tanggal Akhir:</label>
+        <input type="date" id="endDate" class="border p-2 rounded">
+      </div>
+      <div>
+        <label for="statusFilter" class="mr-2">Filter Status:</label>
+        <select id="statusFilter" class="border p-2 rounded">
+          <option value="all">Semua</option>
+          <option value="Belum Didistribusikan">Belum Didistribusikan</option>
+          <option value="Sudah Didistribusikan">Sudah Didistribusikan</option>
+        </select>
+      </div>
+      <div>
+        <button id="resetFilter" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Reset Filter</button>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table id="productionTable" class="w-full bg-white shadow-md rounded-lg">
+        <thead>
+          <tr class="bg-gray-200 text-left">
+            <th class="p-3">Tanggal Produksi</th>
+            <th class="p-3">Status</th>
+            <th class="p-3">Deskripsi</th>
+            <th class="p-3">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="productionTableBody"></tbody>
+      </table>
+      <p id="noDataMessage" class="text-red-600 text-center mt-2 hidden">Tidak ada catatan produksi pada rentang tanggal ini</p>
+    </div>
+  </div>
+
+  <div id="distributeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+      <h2 class="text-xl font-semibold mb-4">Distribusi Produksi</h2>
+      <form id="distributeForm">
+        <input type="hidden" id="distributeId">
+        <input type="hidden" id="distributeDate">
+        <div id="distributeItems"></div>
+        <div class="flex justify-end gap-2 mt-4">
+          <button type="button" id="cancelDistribute" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Batal</button>
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Distribusikan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('productionForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const date = document.getElementById('date').value;
+      const description = document.getElementById('description').value;
+      const products = [
+        { product: 'Basreng 100Gr', quantity: parseInt(document.getElementById('quantity_basreng100gr').value) },
+        { product: 'Basreng 200Gr', quantity: parseInt(document.getElementById('quantity_basreng200gr').value) },
+        { product: 'Makaroni 100Gr', quantity: parseInt(document.getElementById('quantity_makaroni100gr').value) },
+        { product: 'Makaroni 200Gr', quantity: parseInt(document.getElementById('quantity_makaroni200gr').value) },
+        { product: 'Keripik Kaca 50Gr', quantity: parseInt(document.getElementById('quantity_keripikkaca50gr').value) },
+        { product: 'Kripik Kaca 110Gr', quantity: parseInt(document.getElementById('quantity_keripikkaca110gr').value) },
+        { product: 'Singkong 100Gr', quantity: parseInt(document.getElementById('quantity_singkong100gr').value) }
+      ];
+
+      const nonZeroProducts = products.filter(p => p.quantity > 0);
+
+      if (nonZeroProducts.length === 0) {
+        alert('Harap masukkan setidaknya satu produk dengan jumlah lebih dari 0.');
+        return;
+      }
+
+      const newProduction = {
+        date,
+        products: nonZeroProducts,
+        description,
+        distributed: {}
+      };
+
+      try {
+        const productionResponse = await fetch('http://localhost:3000/api/productions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newProduction)
+        });
+        if (!productionResponse.ok) {
+          const errorData = await productionResponse.json();
+          throw new Error(errorData.error || `HTTP error! Status: ${productionResponse.status}`);
+        }
+
+        renderProductionTable();
+        this.reset();
+        document.querySelectorAll('.quantity-input').forEach(input => {
+          input.value = '0';
+        });
+      } catch (error) {
+        console.error('Error saat menambah produksi:', error);
+        alert(`Gagal menambah catatan produksi: ${error.message}`);
+      }
+    });
+
+    document.addEventListener('click', async function(e) {
+      if (e.target.classList.contains('distributeBtn')) {
+        const id = e.target.dataset.id;
+        const productions = await fetchProductions();
+        const production = productions.find(item => item.id === id);
+
+        document.getElementById('distributeId').value = production.id;
+        document.getElementById('distributeDate').value = production.date;
+        const distributeItems = document.getElementById('distributeItems');
+        distributeItems.innerHTML = '';
+
+        production.products.forEach((item, index) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'mb-4';
+          itemDiv.innerHTML = `
+            <h3 class="font-semibold">${item.product} (Jumlah Total: ${item.quantity})</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
+              <div>
+                <label for="branchJablay1_${index}" class="block mb-1">Jablay 1 (Zhidan)</label>
+                <input type="number" id="branchJablay1_${index}" class="w-full border p-2 rounded" min="0" value="0">
+              </div>
+              <div>
+                <label for="branchJablay2_${index}" class="block mb-1">Jablay 2 (Reyhan)</label>
+                <input type="number" id="branchJablay2_${index}" class="w-full border p-2 rounded" min="0" value="0">
+              </div>
+              <div>
+                <label for="branchJablay3_${index}" class="block mb-1">Jablay 3 (Tangsel)</label>
+                <input type="number" id="branchJablay3_${index}" class="w-full border p-2 rounded" min="0" value="0">
+              </div>
+            </div>
+          `;
+          distributeItems.appendChild(itemDiv);
+        });
+
+        document.getElementById('distributeModal').classList.remove('hidden');
+      }
+
+      if (e.target.classList.contains('deleteBtn')) {
+        if (confirm('Yakin ingin menghapus catatan produksi ini?')) {
+          const id = e.target.dataset.id;
+          const productions = await fetchProductions();
+          const production = productions.find(item => item.id === id);
+
+          if (production.distributed && Object.keys(production.distributed).length > 0) {
+            alert('Catatan produksi yang sudah didistribusikan tidak dapat dihapus.');
+            return;
+          }
+
+          try {
+            const response = await fetch(`http://localhost:3000/api/productions/${id}`, {
+              method: 'DELETE'
+            });
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+            renderProductionTable();
+          } catch (error) {
+            console.error('Error saat menghapus produksi:', error);
+            alert('Gagal menghapus catatan produksi.');
+          }
+        }
+      }
+
+      if (e.target.id === 'cancelDistribute') {
+        document.getElementById('distributeModal').classList.add('hidden');
+      }
+    });
+
+    document.getElementById('distributeForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const id = document.getElementById('distributeId').value;
+      const date = document.getElementById('distributeDate').value;
+      const productions = await fetchProductions();
+      const production = productions.find(item => item.id === id);
+      const distributed = {};
+
+      let hasError = false;
+      production.products.forEach((item, index) => {
+        const jablay1 = parseInt(document.getElementById(`branchJablay1_${index}`).value);
+        const jablay2 = parseInt(document.getElementById(`branchJablay2_${index}`).value);
+        const jablay3 = parseInt(document.getElementById(`branchJablay3_${index}`).value);
+        const totalDistributed = jablay1 + jablay2 + jablay3;
+
+        if (totalDistributed !== item.quantity) {
+          alert(`Jumlah yang didistribusikan untuk ${item.product} (${totalDistributed}) harus sama dengan jumlah total produksi (${item.quantity}).`);
+          hasError = true;
+          return;
+        }
+
+        distributed[item.product] = {
+          'Jablay 1 (Zhidan)': jablay1,
+          'Jablay 2 (Reyhan)': jablay2,
+          'Jablay 3 (Tangsel)': jablay3
+        };
+      });
+
+      if (hasError) return;
+
+      try {
+        const productionResponse = await fetch(`http://localhost:3000/api/productions/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date, products: production.products, description: production.description, distributed })
+        });
+        if (!productionResponse.ok) {
+          const errorData = await productionResponse.json();
+          throw new Error(errorData.error || `HTTP error! Status: ${productionResponse.status}`);
+        }
+
+        // Kirim data distribusi ke stok
+        for (const product in distributed) {
+          const branches = distributed[product];
+          for (const branch in branches) {
+            const quantity = branches[branch];
+            if (quantity > 0) {
+              const stockResponse = await fetch('http://localhost:3000/api/stock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product, quantity, branch })
+              });
+              if (!stockResponse.ok) {
+                const errorData = await stockResponse.json();
+                throw new Error(errorData.error || `HTTP error! Status: ${stockResponse.status}`);
+              }
+            }
+          }
+        }
+
+        renderProductionTable();
+        document.getElementById('distributeModal').classList.add('hidden');
+      } catch (error) {
+        console.error('Error saat mendistribusikan:', error);
+        alert(`Gagal mendistribusikan: ${error.message}`);
+      }
+    });
+
+    async function fetchProductions() {
+      try {
+        const response = await fetch('http://localhost:3000/api/productions');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Error fetching productions:', error);
+        alert('Gagal mengambil data produksi. Pastikan server berjalan.');
+        return [];
+      }
+    }
+
+    function applyFilters(productions) {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const statusFilter = document.getElementById('statusFilter').value;
+
+      let filteredData = productions;
+
+      if (startDate && endDate && startDate > endDate) {
+        alert('Tanggal Mulai harus sebelum Tanggal Akhir.');
+        return productions;
+      }
+
+      if (startDate) filteredData = filteredData.filter(item => item.date >= startDate);
+      if (endDate) filteredData = filteredData.filter(item => item.date <= endDate);
+      if (statusFilter !== 'all') {
+        filteredData = filteredData.filter(item => {
+          const isDistributed = item.distributed && Object.keys(item.distributed).length > 0;
+          return statusFilter === 'Sudah Didistribusikan' ? isDistributed : !isDistributed;
+        });
+      }
+
+      return filteredData;
+    }
+
+    function formatDateToIndonesian(dateString) {
+      const date = new Date(dateString);
+      const options = { day: 'numeric', month: 'long', year: 'numeric' };
+      return date.toLocaleDateString('id-ID', options);
+    }
+
+    async function renderProductionTable() {
+      const productions = await fetchProductions();
+      const filteredData = applyFilters(productions);
+      const tbody = document.getElementById('productionTableBody');
+      const noDataMessage = document.getElementById('noDataMessage');
+      tbody.innerHTML = '';
+
+      if (filteredData.length === 0) {
+        noDataMessage.classList.remove('hidden');
+      } else {
+        noDataMessage.classList.add('hidden');
+        filteredData.forEach((item, index) => {
+          const isDistributed = item.distributed && Object.keys(item.distributed).length > 0;
+          const rowClass = isDistributed ? 'bg-green-200' : 'bg-yellow-200';
+
+          let productsTable = `
+            <table class="w-full mt-2 border-collapse">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="p-2 border">Produk</th>
+                  <th class="p-2 border">Jumlah</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          item.products.forEach(product => {
+            productsTable += `
+              <tr>
+                <td class="p-2 border">${product.product}</td>
+                <td class="p-2 border">${product.quantity}</td>
+              </tr>
+            `;
+          });
+          productsTable += `
+              </tbody>
+            </table>
+          `;
+
+          const row = document.createElement('tr');
+          row.className = rowClass;
+          row.innerHTML = `
+            <td class="p-3">
+              <details>
+                <summary class="cursor-pointer flex items-center">
+                  <span class="mr-2">Produksi ${formatDateToIndonesian(item.date)}</span>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </summary>
+                <div class="pl-4">
+                  ${productsTable}
+                </div>
+              </details>
+            </td>
+            <td class="p-3">${isDistributed ? 'Sudah Didistribusikan' : 'Belum Didistribusikan'}</td>
+            <td class="p-3">${item.description || '-'}</td>
+            <td class="p-3">
+              ${!isDistributed ? `<button class="distributeBtn bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2" data-id="${item.id}">Distribusikan</button>` : ''}
+              <button class="deleteBtn bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" data-id="${item.id}">Hapus</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+    }
+
+    document.getElementById('startDate').addEventListener('change', async function() {
+      renderProductionTable();
+    });
+
+    document.getElementById('endDate').addEventListener('change', async function() {
+      renderProductionTable();
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', async function() {
+      renderProductionTable();
+    });
+
+    document.getElementById('resetFilter').addEventListener('click', async function() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      document.getElementById('statusFilter').value = 'all';
+      renderProductionTable();
+    });
+
+    async function init() {
+      renderProductionTable();
+    }
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stok Barang</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .jablay1 {
+      background-color: #e0f2fe;
+    }
+    .jablay2 {
+      background-color: #d1fae5;
+    }
+    .jablay3 {
+      background-color: #fefcbf;
+    }
+    details[open] summary {
+      background-color: #bfdbfe;
+    }
+    summary {
+      padding: 0.5rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #d1d5db;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+  <nav class="bg-blue-500 p-4">
+    <div class="container mx-auto flex justify-between">
+      <div class="text-white text-lg font-semibold">Manajemen Penjualan</div>
+      <div class="space-x-4">
+        <a href="index.html" class="text-white hover:underline">Penjualan</a>
+        <a href="stock.html" class="text-white hover:underline">Stok Barang</a>
+        <a href="production.html" class="text-white hover:underline">Catatan Produksi</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold text-center mb-6">Stok Barang</h1>
+
+    <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Ringkasan Stok dan Penjualan</h2>
+      <p id="totalStockSummary" class="text-lg">Total stok semua cabang (barang yang belum terjual): <span id="totalStock">0</span> unit</p>
+      <p id="totalSalesSummary" class="text-lg">Total barang keluar:</p>
+      <ul id="branchSalesSummary" class="list-disc pl-5"></ul>
+    </div>
+
+    <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Tambah Stok Barang</h2>
+      <form id="stockForm" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label for="product" class="block mb-1">Produk</label>
+          <select id="product" class="w-full border p-2 rounded" required>
+            <option value="Basreng 100Gr">Basreng 100Gr</option>
+            <option value="Basreng 200Gr">Basreng 200Gr</option>
+            <option value="Makaroni 100Gr">Makaroni 100Gr</option>
+            <option value="Makaroni 200Gr">Makaroni 200Gr</option>
+            <option value="Keripik Kaca 50Gr">Keripik Kaca 50Gr</option>
+            <option value="Kripik Kaca 110Gr">Kripik Kaca 110Gr</option>
+            <option value="Singkong 100Gr">Singkong 100Gr</option>
+          </select>
+        </div>
+        <div>
+          <label for="quantity" class="block mb-1">Jumlah</label>
+          <input type="number" id="quantity" class="w-full border p-2 rounded" min="0" required>
+        </div>
+        <div>
+          <label for="branch" class="block mb-1">Cabang</label>
+          <select id="branch" class="w-full border p-2 rounded" required>
+            <option value="Jablay 1 (Zhidan)">Jablay 1 (Zhidan)</option>
+            <option value="Jablay 2 (Reyhan)">Jablay 2 (Reyhan)</option>
+            <option value="Jablay 3 (Tangsel)">Jablay 3 (Tangsel)</option>
+          </select>
+        </div>
+        <div class="sm:col-span-3">
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Tambah Stok</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="space-y-4">
+      <details class="jablay1 rounded-lg shadow-md">
+        <summary class="cursor-pointer flex items-center" id="jablay1Summary">
+          <span class="mr-2">Jablay 1 (Zhidan) - Total: 0</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </summary>
+        <div class="p-4">
+          <table class="w-full bg-white rounded-lg">
+            <thead>
+              <tr class="bg-gray-200 text-left">
+                <th class="p-3">Produk</th>
+                <th class="p-3">Stok</th>
+                <th class="p-3">Keluar</th>
+                <th class="p-3">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="stockTableJablay1"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <details class="jablay2 rounded-lg shadow-md">
+        <summary class="cursor-pointer flex items-center" id="jablay2Summary">
+          <span class="mr-2">Jablay 2 (Reyhan) - Total: 0</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </summary>
+        <div class="p-4">
+          <table class="w-full bg-white rounded-lg">
+            <thead>
+              <tr class="bg-gray-200 text-left">
+                <th class="p-3">Produk</th>
+                <th class="p-3">Stok</th>
+                <th class="p-3">Keluar</th>
+                <th class="p-3">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="stockTableJablay2"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <details class="jablay3 rounded-lg shadow-md">
+        <summary class="cursor-pointer flex items-center" id="jablay3Summary">
+          <span class="mr-2">Jablay 3 (Tangsel) - Total: 0</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </summary>
+        <div class="p-4">
+          <table class="w-full bg-white rounded-lg">
+            <thead>
+              <tr class="bg-gray-200 text-left">
+                <th class="p-3">Produk</th>
+                <th class="p-3">Stok</th>
+                <th class="p-3">Keluar</th>
+                <th class="p-3">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="stockTableJablay3"></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div id="editModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md">
+      <h2 class="text-xl font-semibold mb-4">Edit Stok</h2>
+      <form id="editForm">
+        <input type="hidden" id="editId">
+        <div class="mb-4">
+          <label for="editProduct" class="block mb-1">Produk</label>
+          <select id="editProduct" class="w-full border p-2 rounded" disabled>
+            <option value="Basreng 100Gr">Basreng 100Gr</option>
+            <option value="Basreng 200Gr">Basreng 200Gr</option>
+            <option value="Makaroni 100Gr">Makaroni 100Gr</option>
+            <option value="Makaroni 200Gr">Makaroni 200Gr</option>
+            <option value="Keripik Kaca 50Gr">Keripik Kaca 50Gr</option>
+            <option value="Kripik Kaca 110Gr">Kripik Kaca 110Gr</option>
+            <option value="Singkong 100Gr">Singkong 100Gr</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="editQuantity" class="block mb-1">Jumlah</label>
+          <input type="number" id="editQuantity" class="w-full border p-2 rounded" min="0" required>
+        </div>
+        <div class="mb-4">
+          <label for="editBranch" class="block mb-1">Cabang</label>
+          <select id="editBranch" class="w-full border p-2 rounded" disabled>
+            <option value="Jablay 1 (Zhidan)">Jablay 1 (Zhidan)</option>
+            <option value="Jablay 2 (Reyhan)">Jablay 2 (Reyhan)</option>
+            <option value="Jablay 3 (Tangsel)">Jablay 3 (Tangsel)</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="cancelEdit" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Batal</button>
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="transferModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md">
+      <h2 class="text-xl font-semibold mb-4">Pindah Stok</h2>
+      <form id="transferForm">
+        <input type="hidden" id="transferId">
+        <input type="hidden" id="transferProduct">
+        <input type="hidden" id="transferBranch">
+        <div class="mb-4">
+          <label for="transferToBranch" class="block mb-1">Pindah ke Cabang</label>
+          <select id="transferToBranch" class="w-full border p-2 rounded" required>
+            <option value="Jablay 1 (Zhidan)">Jablay 1 (Zhidan)</option>
+            <option value="Jablay 2 (Reyhan)">Jablay 2 (Reyhan)</option>
+            <option value="Jablay 3 (Tangsel)">Jablay 3 (Tangsel)</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="transferQuantity" class="block mb-1">Jumlah</label>
+          <input type="number" id="transferQuantity" class="w-full border p-2 rounded" min="1" required>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="cancelTransfer" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Batal</button>
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Pindah</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('stockForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const product = document.getElementById('product').value;
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const branch = document.getElementById('branch').value;
+
+      try {
+        const response = await fetch('http://localhost:3000/api/stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product, quantity, branch })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+        }
+
+        console.log('Stok berhasil ditambahkan:', await response.json());
+        renderStockTables();
+        this.reset();
+      } catch (error) {
+        console.error('Error saat menambah stok:', error);
+        alert(`Gagal menambah stok: ${error.message}`);
+      }
+    });
+
+    document.addEventListener('click', async function(e) {
+      if (e.target.classList.contains('editBtn')) {
+        const id = e.target.dataset.id;
+        const stocks = await fetchStocks();
+        const stock = stocks.find(item => item.id === id);
+
+        document.getElementById('editId').value = stock.id;
+        document.getElementById('editProduct').value = stock.product;
+        document.getElementById('editQuantity').value = stock.quantity;
+        document.getElementById('editBranch').value = stock.branch;
+
+        document.getElementById('editModal').classList.remove('hidden');
+      }
+
+      if (e.target.classList.contains('deleteBtn')) {
+        if (confirm('Yakin ingin menghapus stok ini?')) {
+          const id = e.target.dataset.id;
+          try {
+            const response = await fetch(`http://localhost:3000/api/stock/${id}`, {
+              method: 'DELETE'
+            });
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+            console.log('Stok berhasil dihapus:', id);
+            renderStockTables();
+          } catch (error) {
+            console.error('Error saat menghapus stok:', error);
+            alert('Gagal menghapus stok.');
+          }
+        }
+      }
+
+      if (e.target.classList.contains('transferBtn')) {
+        const id = e.target.dataset.id;
+        const stocks = await fetchStocks();
+        const stock = stocks.find(item => item.id === id);
+
+        document.getElementById('transferId').value = stock.id;
+        document.getElementById('transferProduct').value = stock.product;
+        document.getElementById('transferBranch').value = stock.branch;
+
+        const transferToBranch = document.getElementById('transferToBranch');
+        transferToBranch.innerHTML = '';
+        ['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].forEach(branch => {
+          if (branch !== stock.branch) {
+            const option = document.createElement('option');
+            option.value = branch;
+            option.textContent = branch;
+            transferToBranch.appendChild(option);
+          }
+        });
+
+        document.getElementById('transferModal').classList.remove('hidden');
+      }
+
+      if (e.target.id === 'cancelEdit') {
+        document.getElementById('editModal').classList.add('hidden');
+      }
+
+      if (e.target.id === 'cancelTransfer') {
+        document.getElementById('transferModal').classList.add('hidden');
+      }
+    });
+
+    document.getElementById('editForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const id = document.getElementById('editId').value;
+      const product = document.getElementById('editProduct').value;
+      const quantity = parseInt(document.getElementById('editQuantity').value);
+      const branch = document.getElementById('editBranch').value;
+
+      try {
+        const response = await fetch(`http://localhost:3000/api/stock/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product, quantity, branch })
+        });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        console.log('Stok berhasil diedit:', id);
+        renderStockTables();
+        document.getElementById('editModal').classList.add('hidden');
+      } catch (error) {
+        console.error('Error saat mengedit stok:', error);
+        alert('Gagal mengedit stok.');
+      }
+    });
+
+    document.getElementById('transferForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const id = document.getElementById('transferId').value;
+      const product = document.getElementById('transferProduct').value;
+      const fromBranch = document.getElementById('transferBranch').value;
+      const toBranch = document.getElementById('transferToBranch').value;
+      const quantity = parseInt(document.getElementById('transferQuantity').value);
+
+      try {
+        const response = await fetch('http://localhost:3000/api/stock/transfer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product, quantity, fromBranch, toBranch })
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+        }
+
+        console.log('Stok berhasil dipindahkan:', { product, fromBranch, toBranch, quantity });
+        renderStockTables();
+        document.getElementById('transferModal').classList.add('hidden');
+      } catch (error) {
+        console.error('Error saat memindahkan stok:', error);
+        alert(`Gagal memindahkan stok: ${error.message}`);
+      }
+    });
+
+    async function fetchStocks() {
+      try {
+        const response = await fetch('http://localhost:3000/api/stock');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Error fetching stocks:', error);
+        alert('Gagal mengambil data stok. Pastikan server berjalan.');
+        return [];
+      }
+    }
+
+    async function fetchSalesSummary() {
+      try {
+        const response = await fetch('http://localhost:3000/api/sales/summary');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Error fetching sales summary:', error);
+        alert('Gagal mengambil data penjualan.');
+        return {};
+      }
+    }
+
+    function calculateBranchTotal(stocks, branch) {
+      return stocks
+        .filter(stock => stock.branch === branch)
+        .reduce((total, stock) => total + stock.quantity, 0);
+    }
+
+    function calculateTotalStock(stocks) {
+      return stocks.reduce((total, stock) => total + stock.quantity, 0);
+    }
+
+    async function renderStockTables() {
+      const stocks = await fetchStocks();
+      const salesSummary = await fetchSalesSummary();
+
+      const jablay1Stocks = stocks.filter(stock => stock.branch === 'Jablay 1 (Zhidan)');
+      const jablay2Stocks = stocks.filter(stock => stock.branch === 'Jablay 2 (Reyhan)');
+      const jablay3Stocks = stocks.filter(stock => stock.branch === 'Jablay 3 (Tangsel)');
+
+      document.getElementById('jablay1Summary').innerHTML = `
+        <span class="mr-2">Jablay 1 (Zhidan) - Total: ${calculateBranchTotal(stocks, 'Jablay 1 (Zhidan)')}</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      `;
+      document.getElementById('jablay2Summary').innerHTML = `
+        <span class="mr-2">Jablay 2 (Reyhan) - Total: ${calculateBranchTotal(stocks, 'Jablay 2 (Reyhan)')}</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      `;
+      document.getElementById('jablay3Summary').innerHTML = `
+        <span class="mr-2">Jablay 3 (Tangsel) - Total: ${calculateBranchTotal(stocks, 'Jablay 3 (Tangsel)')}</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      `;
+
+      document.getElementById('totalStock').textContent = calculateTotalStock(stocks);
+
+      const branchSalesSummary = document.getElementById('branchSalesSummary');
+      branchSalesSummary.innerHTML = `
+        <li>Jablay 1 (Zhidan): ${salesSummary['Jablay 1 (Zhidan)']?.__total__ || 0} unit</li>
+        <li>Jablay 2 (Reyhan): ${salesSummary['Jablay 2 (Reyhan)']?.__total__ || 0} unit</li>
+        <li>Jablay 3 (Tangsel): ${salesSummary['Jablay 3 (Tangsel)']?.__total__ || 0} unit</li>
+      `;
+
+      const jablay1Body = document.getElementById('stockTableJablay1');
+      const jablay2Body = document.getElementById('stockTableJablay2');
+      const jablay3Body = document.getElementById('stockTableJablay3');
+
+      jablay1Body.innerHTML = '';
+      jablay2Body.innerHTML = '';
+      jablay3Body.innerHTML = '';
+
+      jablay1Stocks.forEach(stock => {
+        const sold = salesSummary[stock.branch]?.[stock.product] || 0;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="p-3">${stock.product}</td>
+          <td class="p-3">${stock.quantity}</td>
+          <td class="p-3">${sold}</td>
+          <td class="p-3">
+            <button class="editBtn bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2" data-id="${stock.id}">Edit</button>
+            <button class="deleteBtn bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 mr-2" data-id="${stock.id}">Hapus</button>
+            <button class="transferBtn bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600" data-id="${stock.id}">Pindah</button>
+          </td>
+        `;
+        jablay1Body.appendChild(row);
+      });
+
+      jablay2Stocks.forEach(stock => {
+        const sold = salesSummary[stock.branch]?.[stock.product] || 0;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="p-3">${stock.product}</td>
+          <td class="p-3">${stock.quantity}</td>
+          <td class="p-3">${sold}</td>
+          <td class="p-3">
+            <button class="editBtn bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2" data-id="${stock.id}">Edit</button>
+            <button class="deleteBtn bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 mr-2" data-id="${stock.id}">Hapus</button>
+            <button class="transferBtn bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600" data-id="${stock.id}">Pindah</button>
+          </td>
+        `;
+        jablay2Body.appendChild(row);
+      });
+
+      jablay3Stocks.forEach(stock => {
+        const sold = salesSummary[stock.branch]?.[stock.product] || 0;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="p-3">${stock.product}</td>
+          <td class="p-3">${stock.quantity}</td>
+          <td class="p-3">${sold}</td>
+          <td class="p-3">
+            <button class="editBtn bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2" data-id="${stock.id}">Edit</button>
+            <button class="deleteBtn bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 mr-2" data-id="${stock.id}">Hapus</button>
+            <button class="transferBtn bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600" data-id="${stock.id}">Pindah</button>
+          </td>
+        `;
+        jablay3Body.appendChild(row);
+      });
+    }
+
+    async function init() {
+      renderStockTables();
+    }
+    init();
+  </script>
+</body>
+</html>
