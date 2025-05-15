@@ -228,7 +228,7 @@
       const branch = document.getElementById('branch').value;
 
       try {
-        const response = await fetch('http://localhost:3000/api/stock', {
+        const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ product, quantity, branch })
@@ -266,7 +266,7 @@
         if (confirm('Yakin ingin menghapus stok ini?')) {
           const id = e.target.dataset.id;
           try {
-            const response = await fetch(`http://localhost:3000/api/stock/${id}`, {
+            const response = await fetch(`https://audit-sijablay-be.vercel.app/api/stock/${id}`, {
               method: 'DELETE'
             });
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
@@ -321,7 +321,7 @@
       const branch = document.getElementById('editBranch').value;
 
       try {
-        const response = await fetch(`http://localhost:3000/api/stock/${id}`, {
+        const response = await fetch(`https://audit-sijablay-be.vercel.app/api/stock/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ product, quantity, branch })
@@ -347,7 +347,7 @@
       const quantity = parseInt(document.getElementById('transferQuantity').value);
 
       try {
-        const response = await fetch('http://localhost:3000/api/stock/transfer', {
+        const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock/transfer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ product, quantity, fromBranch, toBranch })
@@ -368,7 +368,7 @@
 
     async function fetchStocks() {
       try {
-        const response = await fetch('http://localhost:3000/api/stock');
+        const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock');
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
         return data;
@@ -381,7 +381,7 @@
 
     async function fetchSalesSummary() {
       try {
-        const response = await fetch('http://localhost:3000/api/sales/summary');
+        const response = await fetch('https://audit-sijablay-be.vercel.app/api/sales/summary');
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
         return data;

@@ -176,7 +176,7 @@
       };
 
       try {
-        const productionResponse = await fetch('http://localhost:3000/api/productions', {
+        const productionResponse = await fetch('https://audit-sijablay-be.vercel.app/api/productions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newProduction)
@@ -246,7 +246,7 @@
           }
 
           try {
-            const response = await fetch(`http://localhost:3000/api/productions/${id}`, {
+            const response = await fetch(`https://audit-sijablay-be.vercel.app/api/productions/${id}`, {
               method: 'DELETE'
             });
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
@@ -296,7 +296,7 @@
       if (hasError) return;
 
       try {
-        const productionResponse = await fetch(`http://localhost:3000/api/productions/${id}`, {
+        const productionResponse = await fetch(`https://audit-sijablay-be.vercel.app/api/productions/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ date, products: production.products, description: production.description, distributed })
@@ -312,7 +312,7 @@
           for (const branch in branches) {
             const quantity = branches[branch];
             if (quantity > 0) {
-              const stockResponse = await fetch('http://localhost:3000/api/stock', {
+              const stockResponse = await fetch('https://audit-sijablay-be.vercel.app/api/stock', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ product, quantity, branch })
@@ -335,7 +335,7 @@
 
     async function fetchProductions() {
       try {
-        const response = await fetch('http://localhost:3000/api/productions');
+        const response = await fetch('https://audit-sijablay-be.vercel.app/api/productions');
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
         return data;

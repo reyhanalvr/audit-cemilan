@@ -294,7 +294,7 @@
     // Fungsi untuk mengambil data penjualan dari backend
     async function fetchSales() {
       try {
-        const response = await fetch('http://localhost:3000/api/sales');
+        const response = await fetch('https://audit-sijablay-be.vercel.app/api/sales');
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
         console.log('Data penjualan dari backend:', data);
@@ -309,7 +309,7 @@
     // Fungsi untuk mengambil data stok dari backend
     async function fetchStock() {
       try {
-        const response = await fetch('http://localhost:3000/api/stock');
+        const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock');
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
         console.log('Data stok dari backend:', data);
@@ -574,7 +574,7 @@
 
       try {
         // Tambah transaksi penjualan
-        const salesResponse = await fetch('http://localhost:3000/api/sales', {
+        const salesResponse = await fetch('https://audit-sijablay-be.vercel.app/api/sales', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newSale)
@@ -625,7 +625,7 @@
           const id = e.target.dataset.id;
           try {
             // Hapus transaksi
-            const response = await fetch(`http://localhost:3000/api/sales/${id}`, { method: 'DELETE' });
+            const response = await fetch(`https://audit-sijablay-be.vercel.app/api/sales/${id}`, { method: 'DELETE' });
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
             const updatedSales = await fetchSales();
@@ -688,7 +688,7 @@
 
       try {
         // Update transaksi
-        const response = await fetch(`http://localhost:3000/api/sales/${id}`, {
+        const response = await fetch(`https://audit-sijablay-be.vercel.app/api/sales/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updatedSale)
