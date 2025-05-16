@@ -11,9 +11,9 @@
 <body class="bg-gray-100 font-sans">
   <!-- Navigasi -->
   <nav class="bg-blue-500 p-4">
-    <div class="container mx-auto flex justify-between">
-      <div class="text-white text-lg font-semibold">Manajemen Penjualan</div>
-      <div class="space-x-4">
+    <div class="container mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center">
+      <div class="text-white text-lg font-semibold mb-2 sm:mb-0">Manajemen Penjualan</div>
+      <div class="space-x-0 space-y-2 sm:space-x-4 sm:space-y-0 flex flex-col sm:flex-row">
         <a href="index.html" class="text-white hover:underline">Penjualan</a>
         <a href="stock.html" class="text-white hover:underline">Stok Barang</a>
         <a href="production.html" class="text-white hover:underline">Catatan Produksi</a>
@@ -27,7 +27,7 @@
     <!-- Formulir Input -->
     <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
       <h2 class="text-xl font-semibold mb-4">Tambah Data Penjualan</h2>
-      <form id="salesForm" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <form id="salesForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label for="date" class="block mb-1">Tanggal</label>
           <input type="date" id="date" class="w-full border p-2 rounded" required>
@@ -142,8 +142,8 @@
     </div>
     
     <!-- Tabel Penjualan -->
-    <div class="overflow-x-auto">
-      <table id="salesTable" class="w-full bg-white shadow-md rounded-lg">
+    <div class="overflow-x-auto w-full">
+      <table class="min-w-[700px] w-full bg-white shadow-md rounded-lg">
         <thead>
           <tr class="bg-gray-200 text-left">
             <th class="p-3">Tanggal</th>
