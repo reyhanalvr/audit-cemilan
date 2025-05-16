@@ -49,9 +49,35 @@
 
     <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
       <h2 class="text-xl font-semibold mb-4">Ringkasan Stok dan Penjualan</h2>
-      <p id="totalStockSummary" class="text-lg">Total stok semua cabang (barang yang belum terjual): <span id="totalStock">0</span> unit</p>
-      <p id="totalSalesSummary" class="text-lg">Total barang keluar:</p>
-      <ul id="branchSalesSummary" class="list-disc pl-5"></ul>
+      <p id="totalStockSummary" class="text-lg mb-2">
+        Total stok semua cabang (barang yang belum terjual): 
+        <span id="totalStock" class="font-bold text-blue-600">0</span> unit
+      </p>
+      <div class="mb-2">
+        <span class="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full font-semibold">
+          <svg class="w-5 h-5 mr-2 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M9 16h6"></path>
+          </svg>
+          Total Barang Keluar
+        </span>
+      </div>
+      <ul id="branchSalesSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2 text-sm sm:text-base">
+        <li class="bg-yellow-50 p-3 rounded-lg flex flex-col items-center transition-all duration-300 hover:scale-105 hover:shadow-lg">
+          <span class="font-bold text-lg text-yellow-700">Jablay 1 (Zhidan)</span>
+          <span class="text-2xl font-extrabold text-yellow-600">${salesSummary['Jablay 1 (Zhidan)']?.__total__ || 0}</span>
+          <span class="text-xs text-gray-500">pcs</span>
+        </li>
+        <li class="bg-yellow-50 p-3 rounded-lg flex flex-col items-center transition-all duration-300 hover:scale-105 hover:shadow-lg">
+          <span class="font-bold text-lg text-yellow-700">Jablay 2 (Reyhan)</span>
+          <span class="text-2xl font-extrabold text-yellow-600">${salesSummary['Jablay 2 (Reyhan)']?.__total__ || 0}</span>
+          <span class="text-xs text-gray-500">pcs</span>
+        </li>
+        <li class="bg-yellow-50 p-3 rounded-lg flex flex-col items-center transition-all duration-300 hover:scale-105 hover:shadow-lg">
+          <span class="font-bold text-lg text-yellow-700">Jablay 3 (Tangsel)</span>
+          <span class="text-2xl font-extrabold text-yellow-600">${salesSummary['Jablay 3 (Tangsel)']?.__total__ || 0}</span>
+          <span class="text-xs text-gray-500">pcs</span>
+        </li>
+      </ul>
     </div>
 
     <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
@@ -87,6 +113,12 @@
       </form>
     </div>
 
+    <div class="flex justify-end mb-2">
+      <button id="exportCsvBtn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-200">
+        Export ke CSV
+      </button>
+    </div>
+
     <div class="space-y-4">
       <details class="jablay1 rounded-lg shadow-md">
         <summary class="cursor-pointer flex items-center" id="jablay1Summary">
@@ -96,7 +128,7 @@
           </svg>
         </summary>
         <div class="p-4">
-          <table class="w-full bg-white rounded-lg">
+          <table class="w-full bg-white rounded-lg text-sm sm:text-base">
             <thead>
               <tr class="bg-gray-200 text-left">
                 <th class="p-3">Produk</th>
@@ -118,7 +150,7 @@
           </svg>
         </summary>
         <div class="p-4">
-          <table class="w-full bg-white rounded-lg">
+          <table class="w-full bg-white rounded-lg text-sm sm:text-base">
             <thead>
               <tr class="bg-gray-200 text-left">
                 <th class="p-3">Produk</th>
@@ -140,7 +172,7 @@
           </svg>
         </summary>
         <div class="p-4">
-          <table class="w-full bg-white rounded-lg">
+          <table class="w-full bg-white rounded-lg text-sm sm:text-base">
             <thead>
               <tr class="bg-gray-200 text-left">
                 <th class="p-3">Produk</th>
@@ -367,6 +399,23 @@
       }
     });
 
+    document.getElementById('exportCsvBtn').addEventListener('click', async function() {
+      const stocks = await fetchStocks();
+      let csv = 'Produk,Cabang,Stok\n';
+      stocks.forEach(stock => {
+        csv += `"${stock.product}","${stock.branch}",${stock.quantity}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'stok-barang.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
     async function fetchStocks() {
       try {
         const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock');
@@ -434,9 +483,21 @@
 
       const branchSalesSummary = document.getElementById('branchSalesSummary');
       branchSalesSummary.innerHTML = `
-        <li>Jablay 1 (Zhidan): ${salesSummary['Jablay 1 (Zhidan)']?.__total__ || 0} unit</li>
-        <li>Jablay 2 (Reyhan): ${salesSummary['Jablay 2 (Reyhan)']?.__total__ || 0} unit</li>
-        <li>Jablay 3 (Tangsel): ${salesSummary['Jablay 3 (Tangsel)']?.__total__ || 0} unit</li>
+        <li class="bg-yellow-50 p-3 rounded-lg flex flex-col items-center transition-all duration-300 hover:scale-105 hover:shadow-lg">
+          <span class="font-bold text-lg text-yellow-700">Jablay 1 (Zhidan)</span>
+          <span class="text-2xl font-extrabold text-yellow-600">${salesSummary['Jablay 1 (Zhidan)']?.__total__ || 0}</span>
+          <span class="text-xs text-gray-500">pcs</span>
+        </li>
+        <li class="bg-yellow-50 p-3 rounded-lg flex flex-col items-center transition-all duration-300 hover:scale-105 hover:shadow-lg">
+          <span class="font-bold text-lg text-yellow-700">Jablay 2 (Reyhan)</span>
+          <span class="text-2xl font-extrabold text-yellow-600">${salesSummary['Jablay 2 (Reyhan)']?.__total__ || 0}</span>
+          <span class="text-xs text-gray-500">pcs</span>
+        </li>
+        <li class="bg-yellow-50 p-3 rounded-lg flex flex-col items-center transition-all duration-300 hover:scale-105 hover:shadow-lg">
+          <span class="font-bold text-lg text-yellow-700">Jablay 3 (Tangsel)</span>
+          <span class="text-2xl font-extrabold text-yellow-600">${salesSummary['Jablay 3 (Tangsel)']?.__total__ || 0}</span>
+          <span class="text-xs text-gray-500">pcs</span>
+        </li>
       `;
 
       const jablay1Body = document.getElementById('stockTableJablay1');
@@ -452,7 +513,7 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td class="p-3">${stock.product}</td>
-          <td class="p-3">${stock.quantity}</td>
+          <td class="p-3 ${stock.quantity < 10 ? 'bg-red-100 text-red-700 font-bold' : ''}">${stock.quantity}</td>
           <td class="p-3">${sold}</td>
           <td class="p-3">
             <button class="editBtn bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2" data-id="${stock.id}">Edit</button>
@@ -468,7 +529,7 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td class="p-3">${stock.product}</td>
-          <td class="p-3">${stock.quantity}</td>
+          <td class="p-3 ${stock.quantity < 10 ? 'bg-red-100 text-red-700 font-bold' : ''}">${stock.quantity}</td>
           <td class="p-3">${sold}</td>
           <td class="p-3">
             <button class="editBtn bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2" data-id="${stock.id}">Edit</button>
@@ -484,7 +545,7 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td class="p-3">${stock.product}</td>
-          <td class="p-3">${stock.quantity}</td>
+          <td class="p-3 ${stock.quantity < 10 ? 'bg-red-100 text-red-700 font-bold' : ''}">${stock.quantity}</td>
           <td class="p-3">${sold}</td>
           <td class="p-3">
             <button class="editBtn bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2" data-id="${stock.id}">Edit</button>
