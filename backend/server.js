@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+
 const express = require('express');
 const { Pool } = require('pg'); // Pakai pg untuk PostgreSQL
 const cors = require('cors');
@@ -11,7 +13,7 @@ app.use(express.json());
 
 // Koneksi ke database PostgreSQL (Supabase)
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:Thebe@tles45@db.qzjfcqtchwkqnvkgfqai.supabase.co:5432/postgres',
+  connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
