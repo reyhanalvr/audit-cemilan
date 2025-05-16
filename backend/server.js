@@ -65,27 +65,6 @@ pool.connect((err) => {
         console.error('Error checking stock table:', err.message);
       } else if (result.rows[0].count == 0) {
         const initialStocks = [
-          { product: 'Basreng 100Gr', branch: 'Jablay 1 (Zhidan)', quantity: 100 },
-          { product: 'Basreng 200Gr', branch: 'Jablay 1 (Zhidan)', quantity: 100 },
-          { product: 'Makaroni 100Gr', branch: 'Jablay 1 (Zhidan)', quantity: 100 },
-          { product: 'Makaroni 200Gr', branch: 'Jablay 1 (Zhidan)', quantity: 100 },
-          { product: 'Keripik Kaca 50Gr', branch: 'Jablay 1 (Zhidan)', quantity: 100 },
-          { product: 'Kripik Kaca 110Gr', branch: 'Jablay 1 (Zhidan)', quantity: 100 },
-          { product: 'Singkong 100Gr', branch: 'Jablay 1 (Zhidan)', quantity: 100 },
-          { product: 'Basreng 100Gr', branch: 'Jablay 2 (Reyhan)', quantity: 100 },
-          { product: 'Basreng 200Gr', branch: 'Jablay 2 (Reyhan)', quantity: 100 },
-          { product: 'Makaroni 100Gr', branch: 'Jablay 2 (Reyhan)', quantity: 100 },
-          { product: 'Makaroni 200Gr', branch: 'Jablay 2 (Reyhan)', quantity: 100 },
-          { product: 'Keripik Kaca 50Gr', branch: 'Jablay 2 (Reyhan)', quantity: 100 },
-          { product: 'Kripik Kaca 110Gr', branch: 'Jablay 2 (Reyhan)', quantity: 100 },
-          { product: 'Singkong 100Gr', branch: 'Jablay 2 (Reyhan)', quantity: 100 },
-          { product: 'Basreng 100Gr', branch: 'Jablay 3 (Tangsel)', quantity: 100 },
-          { product: 'Basreng 200Gr', branch: 'Jablay 3 (Tangsel)', quantity: 100 },
-          { product: 'Makaroni 100Gr', branch: 'Jablay 3 (Tangsel)', quantity: 100 },
-          { product: 'Makaroni 200Gr', branch: 'Jablay 3 (Tangsel)', quantity: 100 },
-          { product: 'Keripik Kaca 50Gr', branch: 'Jablay 3 (Tangsel)', quantity: 100 },
-          { product: 'Kripik Kaca 110Gr', branch: 'Jablay 3 (Tangsel)', quantity: 100 },
-          { product: 'Singkong 100Gr', branch: 'Jablay 3 (Tangsel)', quantity: 100 }
         ];
         const insertQuery = 'INSERT INTO stock (id, product, branch, quantity) VALUES ($1, $2, $3, $4)';
         initialStocks.forEach((stock, index) => {
@@ -418,6 +397,7 @@ app.post('/api/productions', async (req, res) => {
 
 // Endpoint: Mengupdate catatan produksi (untuk distribusi)
 app.put('/api/productions/:id', async (req, res) => {
+  console.log('Distribusi dimulai untuk production ID:', req.params.id, 'Data:', req.body);
   const { date, products, description, distributed } = req.body;
   if (!Array.isArray(products) || !distributed || typeof distributed !== 'object') {
     res.status(400).json({ error: 'Data produksi atau distribusi tidak valid.' });

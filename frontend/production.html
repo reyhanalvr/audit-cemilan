@@ -139,7 +139,7 @@
         <div id="distributeItems"></div>
         <div class="flex justify-end gap-2 mt-4">
           <button type="button" id="cancelDistribute" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Batal</button>
-          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Distribusikan</button>
+          <button type="submit" id="distributeButton" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Distribusikan</button>
         </div>
       </form>
     </div>
@@ -275,9 +275,9 @@
 
       let hasError = false;
       production.products.forEach((item, index) => {
-        const jablay1 = parseInt(document.getElementById(`branchJablay1_${index}`).value);
-        const jablay2 = parseInt(document.getElementById(`branchJablay2_${index}`).value);
-        const jablay3 = parseInt(document.getElementById(`branchJablay3_${index}`).value);
+        const jablay1 = parseInt(document.getElementById(`branchJablay1_${index}`).value) || 0;
+        const jablay2 = parseInt(document.getElementById(`branchJablay2_${index}`).value) || 0;
+        const jablay3 = parseInt(document.getElementById(`branchJablay3_${index}`).value) || 0;
         const totalDistributed = jablay1 + jablay2 + jablay3;
 
         if (totalDistributed !== item.quantity) {
@@ -295,6 +295,10 @@
 
       if (hasError) return;
 
+      // Nonaktifkan tombol untuk mencegah pengiriman ganda
+      const distributeButton = document.getElementById('distributeButton');
+      distributeButton.disabled = true;
+
       try {
         const productionResponse = await fetch(`https://audit-sijablay-be.vercel.app/api/productions/${id}`, {
           method: 'PUT',
@@ -306,7 +310,9 @@
           throw new Error(errorData.error || `HTTP error! Status: ${productionResponse.status}`);
         }
 
-        // Kirim data distribusi ke stok
+        // Hapus pengiriman manual ke /api/stock karena backend sudah menanganinya
+        // (Kode di bawah ini dihapus)
+        /*
         for (const product in distributed) {
           const branches = distributed[product];
           for (const branch in branches) {
@@ -324,12 +330,15 @@
             }
           }
         }
+        */
 
         renderProductionTable();
         document.getElementById('distributeModal').classList.add('hidden');
       } catch (error) {
         console.error('Error saat mendistribusikan:', error);
         alert(`Gagal mendistribusikan: ${error.message}`);
+      } finally {
+        distributeButton.disabled = false; // Aktifkan kembali tombol setelah proses selesai
       }
     });
 
