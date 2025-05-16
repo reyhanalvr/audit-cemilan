@@ -3,7 +3,6 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 const cors = require('cors');
 const express = require('express');
 const { Pool } = require('pg'); // Pakai pg untuk PostgreSQL
-const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3000;
