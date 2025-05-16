@@ -9,3 +9,4 @@ dist
 *.swp
 sales.db
 server-copy.js
+.env
