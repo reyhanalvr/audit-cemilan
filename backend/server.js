@@ -1,5 +1,6 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 
+const cors = require('cors');
 const express = require('express');
 const { Pool } = require('pg'); // Pakai pg untuk PostgreSQL
 const cors = require('cors');
@@ -9,6 +10,16 @@ const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
+app.use(express.json());
+
+// Konfigurasi CORS
+const corsOptions = {
+  origin: 'https://audit-sijablay.vercel.app', // Ganti dengan domain frontend Anda
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Koneksi ke database PostgreSQL (Supabase)
@@ -26,37 +37,37 @@ pool.connect((err) => {
     pool.query(`
       CREATE TABLE IF NOT EXISTS sales (
         id TEXT PRIMARY KEY,
-        date TEXT,
-        product TEXT,
-        quantity INTEGER,
-        unitPrice REAL,
-        total REAL,
+        "date" TEXT,
+        "product" TEXT,
+        "quantity" INTEGER,
+        "unitPrice" REAL,
+        "total" REAL,
         "paymentMethod" TEXT,
-        status TEXT,
+        "status" TEXT,
         "saleType" TEXT,
         "paymentStatus" TEXT,
-        description TEXT,
-        branch TEXT
+        "description" TEXT,
+        "branch" TEXT
       )
     `);
     // Buat tabel stock jika belum ada
     pool.query(`
       CREATE TABLE IF NOT EXISTS stock (
         id TEXT PRIMARY KEY,
-        product TEXT,
-        branch TEXT,
-        quantity INTEGER DEFAULT 0,
-        CONSTRAINT unique_product_branch UNIQUE (product, branch)
+        "product" TEXT,
+        "branch" TEXT,
+        "quantity" INTEGER DEFAULT 0,
+        CONSTRAINT unique_product_branch UNIQUE ("product", "branch")
       )
     `);
     // Buat tabel productions jika belum ada
     pool.query(`
       CREATE TABLE IF NOT EXISTS productions (
         id TEXT PRIMARY KEY,
-        date TEXT,
-        products TEXT,
-        description TEXT,
-        distributed TEXT DEFAULT '{}'
+        "date" TEXT,
+        "products" TEXT,
+        "description" TEXT,
+        "distributed" TEXT DEFAULT '{}'
       )
     `);
     // Inisialisasi stok awal per cabang jika belum ada
@@ -64,9 +75,8 @@ pool.connect((err) => {
       if (err) {
         console.error('Error checking stock table:', err.message);
       } else if (result.rows[0].count == 0) {
-        const initialStocks = [
-        ];
-        const insertQuery = 'INSERT INTO stock (id, product, branch, quantity) VALUES ($1, $2, $3, $4)';
+        const initialStocks = [];
+        const insertQuery = 'INSERT INTO stock (id, "product", "branch", "quantity") VALUES ($1, $2, $3, $4)';
         initialStocks.forEach((stock, index) => {
           pool.query(insertQuery, [`STK${String(index + 1).padStart(3, '0')}`, stock.product, stock.branch, stock.quantity], (err) => {
             if (err) console.error('Error inserting stock:', err.message);
@@ -87,7 +97,7 @@ async function generateId(prefix, table) {
 
 // Fungsi untuk mencari stok berdasarkan product dan branch
 async function findStock(product, branch) {
-  const result = await pool.query('SELECT * FROM stock WHERE product = $1 AND branch = $2', [product, branch]);
+  const result = await pool.query('SELECT * FROM stock WHERE "product" = $1 AND "branch" = $2', [product, branch]);
   return result.rows[0];
 }
 
@@ -96,12 +106,12 @@ async function updateOrAddStock(product, branch, quantity) {
   const stock = await findStock(product, branch);
   if (stock) {
     // Update stok yang sudah ada
-    await pool.query('UPDATE stock SET quantity = quantity + $1 WHERE product = $2 AND branch = $3', [quantity, product, branch]);
+    await pool.query('UPDATE stock SET "quantity" = "quantity" + $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, branch]);
     return stock.id;
   } else {
     // Tambah stok baru
     const stockId = await generateId('STK', 'stock');
-    await pool.query('INSERT INTO stock (id, product, branch, quantity) VALUES ($1, $2, $3, $4)', [stockId, product, branch, quantity]);
+    await pool.query('INSERT INTO stock (id, "product", "branch", "quantity") VALUES ($1, $2, $3, $4)', [stockId, product, branch, quantity]);
     return stockId;
   }
 }
@@ -120,6 +130,7 @@ app.get('/api/sales', async (req, res) => {
 
 // Endpoint: Menambah transaksi penjualan baru
 app.post('/api/sales', async (req, res) => {
+  console.log('Data yang diterima dari frontend:', req.body);
   const { date, product, quantity, unitPrice, paymentMethod, status, saleType, paymentStatus, description, branch } = req.body;
   if (!branch || !['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(branch)) {
     res.status(400).json({ error: 'Cabang tidak valid.' });
@@ -128,7 +139,7 @@ app.post('/api/sales', async (req, res) => {
   const total = quantity * unitPrice;
   const id = await generateId('TRX', 'sales');
 
-  const stockResult = await pool.query('SELECT * FROM stock WHERE product = $1 AND branch = $2', [product, branch]);
+  const stockResult = await pool.query('SELECT * FROM stock WHERE "product" = $1 AND "branch" = $2', [product, branch]);
   const stock = stockResult.rows[0];
   if (!stock || stock.quantity < quantity) {
     res.status(400).json({ error: `Stok tidak mencukupi untuk ${product} di cabang ${branch}. Stok tersedia: ${stock ? stock.quantity : 0} unit.` });
@@ -136,13 +147,13 @@ app.post('/api/sales', async (req, res) => {
   }
 
   const sql = `
-    INSERT INTO sales (id, date, product, quantity, unitPrice, total, paymentMethod, status, saleType, paymentStatus, description, branch)
+    INSERT INTO sales (id, "date", "product", "quantity", "unitPrice", "total", "paymentMethod", "status", "saleType", "paymentStatus", "description", "branch")
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
   `;
   const params = [id, date, product, quantity, unitPrice, total, paymentMethod, status, saleType, paymentStatus, description || '', branch];
   try {
     await pool.query(sql, params);
-    await pool.query('UPDATE stock SET quantity = quantity - $1 WHERE product = $2 AND branch = $3', [quantity, product, branch]);
+    await pool.query('UPDATE stock SET "quantity" = "quantity" - $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, branch]);
     console.log('Transaksi penjualan ditambahkan:', { id });
     res.status(201).json({ id });
   } catch (err) {
@@ -170,7 +181,7 @@ app.put('/api/sales/:id', async (req, res) => {
   const quantityDifference = quantity - oldSale.quantity;
 
   if (quantityDifference > 0) {
-    const stockResult = await pool.query('SELECT * FROM stock WHERE product = $1 AND branch = $2', [product, branch]);
+    const stockResult = await pool.query('SELECT * FROM stock WHERE "product" = $1 AND "branch" = $2', [product, branch]);
     const stock = stockResult.rows[0];
     if (!stock || stock.quantity < quantityDifference) {
       res.status(400).json({ error: `Stok tidak mencukupi untuk ${product} di cabang ${branch}. Stok tersedia: ${stock ? stock.quantity : 0} unit.` });
@@ -180,7 +191,7 @@ app.put('/api/sales/:id', async (req, res) => {
 
   const sql = `
     UPDATE sales
-    SET date = $1, product = $2, quantity = $3, unitPrice = $4, total = $5, paymentMethod = $6, status = $7, saleType = $8, paymentStatus = $9, description = $10, branch = $11
+    SET "date" = $1, "product" = $2, "quantity" = $3, "unitPrice" = $4, "total" = $5, "paymentMethod" = $6, "status" = $7, "saleType" = $8, "paymentStatus" = $9, "description" = $10, "branch" = $11
     WHERE id = $12
   `;
   const params = [date, product, quantity, unitPrice, total, paymentMethod, status, saleType || 'onhand', paymentStatus, description || '', branch, req.params.id];
@@ -192,7 +203,7 @@ app.put('/api/sales/:id', async (req, res) => {
       return;
     }
 
-    await pool.query('UPDATE stock SET quantity = quantity - $1 WHERE product = $2 AND branch = $3', [quantityDifference, product, branch]);
+    await pool.query('UPDATE stock SET "quantity" = "quantity" - $1 WHERE "product" = $2 AND "branch" = $3', [quantityDifference, product, branch]);
     console.log('Transaksi penjualan diperbarui:', { id: req.params.id });
     res.status(200).json({ message: 'Transaksi diperbarui.' });
   } catch (err) {
@@ -218,7 +229,7 @@ app.delete('/api/sales/:id', async (req, res) => {
       return;
     }
 
-    await pool.query('UPDATE stock SET quantity = quantity + $1 WHERE product = $2 AND branch = $3', [sale.quantity, sale.product, sale.branch]);
+    await pool.query('UPDATE stock SET "quantity" = "quantity" + $1 WHERE "product" = $2 AND "branch" = $3', [sale.quantity, sale.product, sale.branch]);
     console.log('Transaksi penjualan dihapus:', { id: req.params.id });
     res.status(204).send();
   } catch (err) {
@@ -272,7 +283,7 @@ app.put('/api/stock/:id', async (req, res) => {
     return;
   }
 
-  const sql = 'UPDATE stock SET product = $1, quantity = $2, branch = $3 WHERE id = $4';
+  const sql = 'UPDATE stock SET "product" = $1, "quantity" = $2, "branch" = $3 WHERE id = $4';
   try {
     const result = await pool.query(sql, [product, quantity, branch, req.params.id]);
     if (result.rowCount === 0) {
@@ -335,7 +346,7 @@ app.post('/api/stock/transfer', async (req, res) => {
   }
 
   try {
-    await pool.query('UPDATE stock SET quantity = quantity - $1 WHERE product = $2 AND branch = $3', [quantity, product, fromBranch]);
+    await pool.query('UPDATE stock SET "quantity" = "quantity" - $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, fromBranch]);
     await updateOrAddStock(product, toBranch, quantity);
     console.log(`Stok dipindahkan: ${quantity} unit ${product} dari ${fromBranch} ke ${toBranch}`);
     res.status(200).json({ message: 'Stok berhasil dipindahkan.' });
@@ -381,7 +392,7 @@ app.post('/api/productions', async (req, res) => {
 
   const id = await generateId('PRD', 'productions');
   const sql = `
-    INSERT INTO productions (id, date, products, description, distributed)
+    INSERT INTO productions (id, "date", "products", "description", "distributed")
     VALUES ($1, $2, $3, $4, $5)
   `;
   const params = [id, date, JSON.stringify(products), description || '', JSON.stringify(distributed || {})];
@@ -450,7 +461,7 @@ app.put('/api/productions/:id', async (req, res) => {
 
     const sql = `
       UPDATE productions
-      SET date = $1, products = $2, description = $3, distributed = $4
+      SET "date" = $1, "products" = $2, "description" = $3, "distributed" = $4
       WHERE id = $5
     `;
     const params = [date, JSON.stringify(products), description || '', JSON.stringify(distributed), req.params.id];
@@ -504,9 +515,9 @@ app.delete('/api/productions/:id', async (req, res) => {
 app.get('/api/sales/summary', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT branch, product, SUM(quantity) as totalSold
+      SELECT "branch", "product", SUM("quantity") as totalSold
       FROM sales
-      GROUP BY branch, product
+      GROUP BY "branch", "product"
     `);
     const summary = {};
     result.rows.forEach(row => {
