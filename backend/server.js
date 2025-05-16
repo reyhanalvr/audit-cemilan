@@ -397,21 +397,34 @@ app.post('/api/productions', async (req, res) => {
 
 // Endpoint: Mengupdate catatan produksi (untuk distribusi)
 app.put('/api/productions/:id', async (req, res) => {
-  console.log('Distribusi dimulai untuk production ID:', req.params.id, 'Data:', req.body);
+  console.log(`[${new Date().toISOString()}] Distribusi dimulai untuk production ID: ${req.params.id}, Data:`, req.body);
   const { date, products, description, distributed } = req.body;
   if (!Array.isArray(products) || !distributed || typeof distributed !== 'object') {
     res.status(400).json({ error: 'Data produksi atau distribusi tidak valid.' });
     return;
   }
 
-  const productionResult = await pool.query('SELECT * FROM productions WHERE id = $1', [req.params.id]);
-  const production = productionResult.rows[0];
-  if (!production) {
-    res.status(404).json({ error: 'Catatan produksi tidak ditemukan.' });
-    return;
-  }
-
+  // Mulai transaksi untuk mencegah race condition
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+    
+    // Lock baris production untuk mencegah akses bersamaan
+    const productionResult = await client.query(
+      'SELECT * FROM productions WHERE id = $1 FOR UPDATE',
+      [req.params.id]
+    );
+    const production = productionResult.rows[0];
+    if (!production) {
+      throw new Error('Catatan produksi tidak ditemukan.');
+    }
+
+    // Cek apakah sudah didistribusikan
+    const existingDistributed = JSON.parse(production.distributed || '{}');
+    if (Object.keys(existingDistributed).length > 0) {
+      throw new Error('Catatan produksi ini sudah didistribusikan.');
+    }
+
     const oldProducts = JSON.parse(production.products || '[]');
     for (const [productName, branchQuantities] of Object.entries(distributed)) {
       const product = oldProducts.find(p => p.product === productName);
@@ -441,16 +454,20 @@ app.put('/api/productions/:id', async (req, res) => {
       WHERE id = $5
     `;
     const params = [date, JSON.stringify(products), description || '', JSON.stringify(distributed), req.params.id];
-    const result = await pool.query(sql, params);
+    const result = await client.query(sql, params);
     if (result.rowCount === 0) {
-      res.status(404).json({ error: 'Catatan produksi tidak ditemukan.' });
-      return;
+      throw new Error('Catatan produksi tidak ditemukan.');
     }
-    console.log('Catatan produksi diperbarui:', { id: req.params.id });
+
+    await client.query('COMMIT');
+    console.log(`[${new Date().toISOString()}] Catatan produksi diperbarui:`, { id: req.params.id });
     res.status(200).send();
   } catch (error) {
-    console.error('Error saat mendistribusikan:', error.message);
+    await client.query('ROLLBACK');
+    console.error(`[${new Date().toISOString()}] Error saat mendistribusikan:`, error.message);
     res.status(400).json({ error: error.message });
+  } finally {
+    client.release();
   }
 });
 

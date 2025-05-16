@@ -300,6 +300,9 @@
       distributeButton.disabled = true;
 
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // Timeout 10 detik
+
         const productionResponse = await fetch(`https://audit-sijablay-be.vercel.app/api/productions/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
