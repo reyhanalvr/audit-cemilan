@@ -514,26 +514,34 @@ app.delete('/api/productions/:id', async (req, res) => {
 app.get('/api/sales/summary', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT "branch", "product", SUM("quantity") as totalSold
+      SELECT "branch", "product", COALESCE(SUM("quantity"), 0) as totalSold
       FROM sales
       GROUP BY "branch", "product"
     `);
     console.log('Raw query result:', result.rows); // Log hasil query mentah
-    const summary = {};
+    const summary = {
+      'Jablay 1 (Zhidan)': {},
+      'Jablay 2 (Reyhan)': {},
+      'Jablay 3 (Tangsel)': {}
+    };
     result.rows.forEach(row => {
       console.log('Row data:', row); // Log setiap baris
-      if (!summary[row.branch]) summary[row.branch] = {};
-      summary[row.branch][row.product] = parseInt(row.totalSold); // Pastikan totalSold adalah integer
+      if (['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(row.branch)) {
+        if (!summary[row.branch]) summary[row.branch] = {};
+        summary[row.branch][row.product] = parseInt(row.totalSold) || 0; // Pastikan integer dan default 0
+      }
     });
 
     const branchTotals = {};
     result.rows.forEach(row => {
-      const totalSold = parseInt(row.totalSold); // Konversi ke integer
+      const totalSold = parseInt(row.totalSold) || 0; // Konversi ke integer
       console.log(`Adding to ${row.branch}: ${totalSold}`); // Log penjumlahan
-      branchTotals[row.branch] = (branchTotals[row.branch] || 0) + totalSold;
+      if (['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(row.branch)) {
+        branchTotals[row.branch] = (branchTotals[row.branch] || 0) + totalSold;
+      }
     });
 
-    Object.keys(summary).forEach(branch => {
+    ['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].forEach(branch => {
       summary[branch]['__total__'] = branchTotals[branch] || 0;
     });
 
