@@ -514,28 +514,31 @@ app.delete('/api/productions/:id', async (req, res) => {
 app.get('/api/sales/summary', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT "branch", "product", COALESCE(SUM("quantity"), 0) as totalSold
+      SELECT TRIM("branch") as branch, TRIM("product") as product, COALESCE(SUM("quantity"), 0) as totalSold
       FROM sales
-      GROUP BY "branch", "product"
+      GROUP BY TRIM("branch"), TRIM("product")
     `);
-    console.log('Raw query result:', result.rows); // Log hasil query mentah
+    console.log('Raw query result:', result.rows);
     const summary = {
       'Jablay 1 (Zhidan)': {},
       'Jablay 2 (Reyhan)': {},
       'Jablay 3 (Tangsel)': {}
     };
     result.rows.forEach(row => {
-      console.log('Row data:', row); // Log setiap baris
+      console.log('Row data:', row);
+      console.log('Type of totalSold:', typeof row.totalSold); // Log tipe data
+      const totalSoldValue = Number(row.totalSold); // Gunakan Number untuk konversi
       if (['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(row.branch)) {
         if (!summary[row.branch]) summary[row.branch] = {};
-        summary[row.branch][row.product] = parseInt(row.totalSold) || 0; // Pastikan integer dan default 0
+        summary[row.branch][row.product] = isNaN(totalSoldValue) ? 0 : totalSoldValue;
       }
     });
 
     const branchTotals = {};
     result.rows.forEach(row => {
-      const totalSold = parseInt(row.totalSold) || 0; // Konversi ke integer
-      console.log(`Adding to ${row.branch}: ${totalSold}`); // Log penjumlahan
+      const totalSoldValue = Number(row.totalSold);
+      const totalSold = isNaN(totalSoldValue) ? 0 : totalSoldValue;
+      console.log(`Adding to ${row.branch}: ${totalSold}`);
       if (['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(row.branch)) {
         branchTotals[row.branch] = (branchTotals[row.branch] || 0) + totalSold;
       }
