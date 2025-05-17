@@ -25,7 +25,17 @@
     <h1 class="text-3xl font-bold text-center mb-6">Laporan Keuangan</h1>
 
     <!-- Filter -->
-    <div class="mb-6 flex flex-col sm:flex-row gap-4">
+    <div class="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+      <div>
+        <label for="periodFilter" class="mr-2">Filter Periode:</label>
+        <select id="periodFilter" class="border p-2 rounded">
+          <option value="all">Semua</option>
+          <option value="today">Hari Ini</option>
+          <option value="7days">7 Hari</option>
+          <option value="14days">14 Hari</option>
+          <option value="30days">30 Hari</option>
+        </select>
+      </div>
       <div>
         <label for="startDate" class="mr-2">Tanggal Mulai:</label>
         <input type="date" id="startDate" class="border p-2 rounded">
@@ -59,8 +69,8 @@
             <td id="totalProductionCost" class="p-3 border-t text-right">Rp0</td>
           </tr>
           <tr>
-            <td class="p-3 border-t">Laba Kotor</td>
-            <td id="grossProfit" class="p-3 border-t text-right">Rp0</td>
+            <td class="p-3 border-t">Laba Bersih</td>
+            <td id="netProfit" class="p-3 border-t text-right">Rp0</td>
           </tr>
           <tr>
             <td class="p-3 border-t">Laba dari Penjualan Reseller</td>
@@ -217,6 +227,34 @@
       }
     }
 
+    // Fungsi untuk menghitung tanggal berdasarkan periode
+    function setDateRange(period) {
+      const today = new Date(); // Mengambil tanggal saat ini secara dinamis
+      const endDate = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      let startDate;
+
+      if (period === 'today') {
+        startDate = endDate; // Hanya hari ini
+      } else if (period === '7days') {
+        const start = new Date(today);
+        start.setDate(today.getDate() - 6); // 7 hari ke belakang (termasuk hari ini)
+        startDate = start.toISOString().split('T')[0];
+      } else if (period === '14days') {
+        const start = new Date(today);
+        start.setDate(today.getDate() - 13); // 14 hari ke belakang
+        startDate = start.toISOString().split('T')[0];
+      } else if (period === '30days') {
+        const start = new Date(today);
+        start.setDate(today.getDate() - 29); // 30 hari ke belakang
+        startDate = start.toISOString().split('T')[0];
+      } else {
+        startDate = ''; // Jika 'all', tidak ada filter tanggal
+      }
+
+      document.getElementById('startDate').value = startDate;
+      document.getElementById('endDate').value = period === 'all' ? '' : endDate;
+    }
+
     // Fungsi untuk filter data berdasarkan rentang tanggal
     function applyFilters(sales) {
       const startDate = document.getElementById('startDate').value;
@@ -246,8 +284,8 @@
         return sum + (costPerUnit * (item.quantity || 0));
       }, 0);
 
-      // Laba kotor
-      const grossProfit = totalRevenue - totalProductionCost;
+      // Laba bersih (Total Pendapatan - Total Modal Produksi)
+      const netProfit = totalRevenue - totalProductionCost;
 
       // Laba dari penjualan reseller
       const resellerProfit = data
@@ -272,7 +310,7 @@
       // Update DOM
       document.getElementById('totalRevenue').textContent = formatRupiah(totalRevenue);
       document.getElementById('totalProductionCost').textContent = formatRupiah(totalProductionCost);
-      document.getElementById('grossProfit').textContent = formatRupiah(grossProfit);
+      document.getElementById('netProfit').textContent = formatRupiah(netProfit);
       document.getElementById('resellerProfit').textContent = formatRupiah(resellerProfit);
       document.getElementById('onhandProfit').textContent = formatRupiah(onhandProfit);
     }
@@ -325,8 +363,19 @@
       }
     }
 
+    // Event listener untuk filter periode
+    document.getElementById('periodFilter').addEventListener('change', async function() {
+      const period = this.value;
+      setDateRange(period);
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderFinancialSummary(filteredData);
+      renderBranchRevenue(filteredData);
+    });
+
     // Filter berdasarkan rentang tanggal
     document.getElementById('startDate').addEventListener('change', async function() {
+      document.getElementById('periodFilter').value = 'all'; // Reset dropdown
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderFinancialSummary(filteredData);
@@ -334,6 +383,7 @@
     });
 
     document.getElementById('endDate').addEventListener('change', async function() {
+      document.getElementById('periodFilter').value = 'all'; // Reset dropdown
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderFinancialSummary(filteredData);
@@ -342,6 +392,7 @@
 
     // Reset filter
     document.getElementById('resetFilter').addEventListener('click', async function() {
+      document.getElementById('periodFilter').value = 'all';
       document.getElementById('startDate').value = '';
       document.getElementById('endDate').value = '';
       const sales = await fetchSales();
