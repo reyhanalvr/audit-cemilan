@@ -518,15 +518,19 @@ app.get('/api/sales/summary', async (req, res) => {
       FROM sales
       GROUP BY "branch", "product"
     `);
+    console.log('Raw query result:', result.rows); // Log hasil query mentah
     const summary = {};
     result.rows.forEach(row => {
+      console.log('Row data:', row); // Log setiap baris
       if (!summary[row.branch]) summary[row.branch] = {};
-      summary[row.branch][row.product] = row.totalSold;
+      summary[row.branch][row.product] = parseInt(row.totalSold); // Pastikan totalSold adalah integer
     });
 
     const branchTotals = {};
     result.rows.forEach(row => {
-      branchTotals[row.branch] = (branchTotals[row.branch] || 0) + row.totalSold;
+      const totalSold = parseInt(row.totalSold); // Konversi ke integer
+      console.log(`Adding to ${row.branch}: ${totalSold}`); // Log penjumlahan
+      branchTotals[row.branch] = (branchTotals[row.branch] || 0) + totalSold;
     });
 
     Object.keys(summary).forEach(branch => {
