@@ -21,7 +21,7 @@
     </div>
   </nav>
 
-  <div class="container mx-auto p-6">
+  <div id="content" class="container mx-auto p-6 hidden">
     <h1 class="text-3xl font-bold text-center mb-6">Laporan Keuangan</h1>
 
     <!-- Filter -->
@@ -184,7 +184,12 @@
     </div>
   </div>
 
+  <div id="authMessage" class="container mx-auto p-6 text-center hidden"></div>
+
   <script>
+    // Kata sandi default (ubah sesuai kebutuhan)
+    const PASSWORD = "jablay69";
+
     // Fungsi untuk format Rupiah
     function formatRupiah(number) {
       return `Rp${number.toLocaleString('id-ID')}`;
@@ -229,26 +234,26 @@
 
     // Fungsi untuk menghitung tanggal berdasarkan periode
     function setDateRange(period) {
-      const today = new Date(); // Mengambil tanggal saat ini secara dinamis
-      const endDate = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      const today = new Date();
+      const endDate = today.toISOString().split('T')[0];
       let startDate;
 
       if (period === 'today') {
-        startDate = endDate; // Hanya hari ini
+        startDate = endDate;
       } else if (period === '7days') {
         const start = new Date(today);
-        start.setDate(today.getDate() - 6); // 7 hari ke belakang (termasuk hari ini)
+        start.setDate(today.getDate() - 6);
         startDate = start.toISOString().split('T')[0];
       } else if (period === '14days') {
         const start = new Date(today);
-        start.setDate(today.getDate() - 13); // 14 hari ke belakang
+        start.setDate(today.getDate() - 13);
         startDate = start.toISOString().split('T')[0];
       } else if (period === '30days') {
         const start = new Date(today);
-        start.setDate(today.getDate() - 29); // 30 hari ke belakang
+        start.setDate(today.getDate() - 29);
         startDate = start.toISOString().split('T')[0];
       } else {
-        startDate = ''; // Jika 'all', tidak ada filter tanggal
+        startDate = '';
       }
 
       document.getElementById('startDate').value = startDate;
@@ -275,19 +280,12 @@
 
     // Fungsi untuk menghitung dan menampilkan ringkasan keuangan semua cabang
     function renderFinancialSummary(data) {
-      // Total pendapatan
       const totalRevenue = data.reduce((sum, item) => sum + (item.total || 0), 0);
-
-      // Total modal produksi (HPP)
       const totalProductionCost = data.reduce((sum, item) => {
         const costPerUnit = productionCosts[item.product] || 0;
         return sum + (costPerUnit * (item.quantity || 0));
       }, 0);
-
-      // Laba bersih (Total Pendapatan - Total Modal Produksi)
       const netProfit = totalRevenue - totalProductionCost;
-
-      // Laba dari penjualan reseller
       const resellerProfit = data
         .filter(item => item.saleType === 'reseller')
         .reduce((sum, item) => {
@@ -296,8 +294,6 @@
           const cost = costPerUnit * (item.quantity || 0);
           return sum + (revenue - cost);
         }, 0);
-
-      // Laba dari penjualan onhand
       const onhandProfit = data
         .filter(item => item.saleType === 'onhand')
         .reduce((sum, item) => {
@@ -307,7 +303,6 @@
           return sum + (revenue - cost);
         }, 0);
 
-      // Update DOM
       document.getElementById('totalRevenue').textContent = formatRupiah(totalRevenue);
       document.getElementById('totalProductionCost').textContent = formatRupiah(totalProductionCost);
       document.getElementById('netProfit').textContent = formatRupiah(netProfit);
@@ -327,9 +322,7 @@
         const branch = item.branch || "Tidak Diketahui";
         if (branchSummaries.hasOwnProperty(branch)) {
           const grossRevenue = item.total || 0;
-
           branchSummaries[branch].gross += grossRevenue;
-
           if (item.saleType === 'reseller') {
             branchSummaries[branch].reseller += grossRevenue;
           } else if (item.saleType === 'onhand') {
@@ -338,7 +331,6 @@
         }
       });
 
-      // Update DOM untuk setiap cabang
       document.getElementById('grossRevenueJablay1').textContent = formatRupiah(branchSummaries["Jablay 1 (Zhidan)"].gross);
       document.getElementById('resellerRevenueJablay1').textContent = formatRupiah(branchSummaries["Jablay 1 (Zhidan)"].reseller);
       document.getElementById('onhandRevenueJablay1').textContent = formatRupiah(branchSummaries["Jablay 1 (Zhidan)"].onhand);
@@ -363,6 +355,22 @@
       }
     }
 
+    // Fungsi autentikasi
+    function authenticate() {
+      const password = prompt("Masukkan kata sandi untuk mengakses laporan keuangan:");
+      if (password === PASSWORD) {
+        document.getElementById('content').classList.remove('hidden');
+        document.getElementById('authMessage').classList.add('hidden');
+        init();
+      } else if (password === null) {
+        document.getElementById('authMessage').textContent = "Akses dibatalkan.";
+        document.getElementById('authMessage').classList.remove('hidden');
+      } else {
+        document.getElementById('authMessage').textContent = "Kata sandi salah. Akses ditolak.";
+        document.getElementById('authMessage').classList.remove('hidden');
+      }
+    }
+
     // Event listener untuk filter periode
     document.getElementById('periodFilter').addEventListener('change', async function() {
       const period = this.value;
@@ -375,7 +383,7 @@
 
     // Filter berdasarkan rentang tanggal
     document.getElementById('startDate').addEventListener('change', async function() {
-      document.getElementById('periodFilter').value = 'all'; // Reset dropdown
+      document.getElementById('periodFilter').value = 'all';
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderFinancialSummary(filteredData);
@@ -383,7 +391,7 @@
     });
 
     document.getElementById('endDate').addEventListener('change', async function() {
-      document.getElementById('periodFilter').value = 'all'; // Reset dropdown
+      document.getElementById('periodFilter').value = 'all';
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderFinancialSummary(filteredData);
@@ -401,7 +409,7 @@
       renderBranchRevenue(filteredData);
     });
 
-    // Inisialisasi
+    // Inisialisasi dengan autentikasi
     async function init() {
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
@@ -409,7 +417,9 @@
       renderBranchRevenue(filteredData);
       setupCollapsible();
     }
-    init();
+
+    // Jalankan autentikasi saat halaman dimuat
+    window.onload = authenticate;
   </script>
 </body>
 </html>
