@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan Keuangan</title>
+  <link rel="icon" type="image/png" href="assets/logo.jpg">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+  <!-- Navigasi -->
+  <nav class="bg-blue-500 p-4">
+    <div class="container mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center">
+      <div class="text-white text-lg font-semibold mb-2 sm:mb-0">Manajemen Penjualan</div>
+      <div class="space-x-0 space-y-2 sm:space-x-4 sm:space-y-0 flex flex-col sm:flex-row">
+        <a href="index.html" class="text-white hover:underline">Penjualan</a>
+        <a href="stock.html" class="text-white hover:underline">Stok Barang</a>
+        <a href="production.html" class="text-white hover:underline">Catatan Produksi</a>
+        <a href="profit.html" class="text-white hover:underline">Laporan Keuangan</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold text-center mb-6">Laporan Keuangan</h1>
+
+    <!-- Filter -->
+    <div class="mb-6 flex flex-col sm:flex-row gap-4">
+      <div>
+        <label for="startDate" class="mr-2">Tanggal Mulai:</label>
+        <input type="date" id="startDate" class="border p-2 rounded">
+      </div>
+      <div>
+        <label for="endDate" class="mr-2">Tanggal Akhir:</label>
+        <input type="date" id="endDate" class="border p-2 rounded">
+      </div>
+      <div>
+        <button id="resetFilter" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Reset Filter</button>
+      </div>
+    </div>
+
+    <!-- Ringkasan Keuangan Semua Cabang -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+      <h2 class="text-xl font-semibold mb-4">Ringkasan Keuangan (Semua Cabang)</h2>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-3 text-left">Metrik</th>
+            <th class="p-3 text-right">Nilai</th>
+          </tr>
+        </thead>
+        <tbody id="financialSummary">
+          <tr>
+            <td class="p-3 border-t">Total Pendapatan</td>
+            <td id="totalRevenue" class="p-3 border-t text-right">Rp0</td>
+          </tr>
+          <tr>
+            <td class="p-3 border-t">Total Modal Produksi (HPP)</td>
+            <td id="totalProductionCost" class="p-3 border-t text-right">Rp0</td>
+          </tr>
+          <tr>
+            <td class="p-3 border-t">Laba Kotor</td>
+            <td id="grossProfit" class="p-3 border-t text-right">Rp0</td>
+          </tr>
+          <tr>
+            <td class="p-3 border-t">Laba dari Penjualan Reseller</td>
+            <td id="resellerProfit" class="p-3 border-t text-right">Rp0</td>
+          </tr>
+          <tr>
+            <td class="p-3 border-t">Laba dari Penjualan On Hand</td>
+            <td id="onhandProfit" class="p-3 border-t text-right">Rp0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tabel Pendapatan per Cabang (Collapsible) -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Pendapatan per Cabang</h2>
+      <div class="space-y-2">
+        <!-- Jablay 1 (Zhidan) -->
+        <div>
+          <button class="collapsible w-full text-left bg-blue-100 p-3 rounded-lg hover:bg-blue-200 focus:outline-none">
+            Jablay 1 (Zhidan)
+          </button>
+          <div class="content hidden">
+            <table class="w-full border-collapse mt-2">
+              <thead>
+                <tr class="bg-gray-200">
+                  <th class="p-3 text-left">Metrik</th>
+                  <th class="p-3 text-right">Nilai</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="p-3 border-t">Pendapatan Kotor</td>
+                  <td id="grossRevenueJablay1" class="p-3 border-t text-right">Rp0</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border-t">Pendapatan dari Reseller</td>
+                  <td id="resellerRevenueJablay1" class="p-3 border-t text-right">Rp0</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border-t">Pendapatan dari On Hand</td>
+                  <td id="onhandRevenueJablay1" class="p-3 border-t text-right">Rp0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Jablay 2 (Reyhan) -->
+        <div>
+          <button class="collapsible w-full text-left bg-green-100 p-3 rounded-lg hover:bg-green-200 focus:outline-none">
+            Jablay 2 (Reyhan)
+          </button>
+          <div class="content hidden">
+            <table class="w-full border-collapse mt-2">
+              <thead>
+                <tr class="bg-gray-200">
+                  <th class="p-3 text-left">Metrik</th>
+                  <th class="p-3 text-right">Nilai</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="p-3 border-t">Pendapatan Kotor</td>
+                  <td id="grossRevenueJablay2" class="p-3 border-t text-right">Rp0</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border-t">Pendapatan dari Reseller</td>
+                  <td id="resellerRevenueJablay2" class="p-3 border-t text-right">Rp0</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border-t">Pendapatan dari On Hand</td>
+                  <td id="onhandRevenueJablay2" class="p-3 border-t text-right">Rp0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Jablay 3 (Tangsel) -->
+        <div>
+          <button class="collapsible w-full text-left bg-yellow-100 p-3 rounded-lg hover:bg-yellow-200 focus:outline-none">
+            Jablay 3 (Tangsel)
+          </button>
+          <div class="content hidden">
+            <table class="w-full border-collapse mt-2">
+              <thead>
+                <tr class="bg-gray-200">
+                  <th class="p-3 text-left">Metrik</th>
+                  <th class="p-3 text-right">Nilai</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="p-3 border-t">Pendapatan Kotor</td>
+                  <td id="grossRevenueJablay3" class="p-3 border-t text-right">Rp0</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border-t">Pendapatan dari Reseller</td>
+                  <td id="resellerRevenueJablay3" class="p-3 border-t text-right">Rp0</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border-t">Pendapatan dari On Hand</td>
+                  <td id="onhandRevenueJablay3" class="p-3 border-t text-right">Rp0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Fungsi untuk format Rupiah
+    function formatRupiah(number) {
+      return `Rp${number.toLocaleString('id-ID')}`;
+    }
+
+    // Harga Modal Produksi (HPP) per produk (dalam Rp)
+    const productionCosts = {
+      "Basreng 100Gr": 7960,
+      "Basreng 200Gr": 13500,
+      "Makaroni 100Gr": 6760,
+      "Makaroni 200Gr": 11100,
+      "Keripik Kaca 50Gr": 6110,
+      "Kripik Kaca 110Gr": 10570,
+      "Singkong 100Gr": 8100
+    };
+
+    // Harga jual per produk berdasarkan tipe penjualan (dari index.html)
+    const productPrices = {
+      "Basreng 100Gr": { onhand: 10000, reseller: 9000 },
+      "Basreng 200Gr": { onhand: 15500, reseller: 14500 },
+      "Makaroni 100Gr": { onhand: 10000, reseller: 9000 },
+      "Makaroni 200Gr": { onhand: 13000, reseller: 12000 },
+      "Keripik Kaca 50Gr": { onhand: 8000, reseller: 7000 },
+      "Kripik Kaca 110Gr": { onhand: 12000, reseller: 11000 },
+      "Singkong 100Gr": { onhand: 10000, reseller: 9000 }
+    };
+
+    // Fungsi untuk mengambil data penjualan dari backend
+    async function fetchSales() {
+      try {
+        const response = await fetch('https://audit-sijablay-be.vercel.app/api/sales');
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        console.log('Data penjualan dari backend:', data);
+        return data;
+      } catch (error) {
+        console.error('Error fetching sales:', error);
+        alert('Gagal mengambil data penjualan. Pastikan server berjalan.');
+        return [];
+      }
+    }
+
+    // Fungsi untuk filter data berdasarkan rentang tanggal
+    function applyFilters(sales) {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+
+      let filteredData = sales;
+
+      if (startDate && endDate && startDate > endDate) {
+        alert('Tanggal Mulai harus sebelum Tanggal Akhir.');
+        return sales;
+      }
+
+      if (startDate) filteredData = filteredData.filter(item => item.date >= startDate);
+      if (endDate) filteredData = filteredData.filter(item => item.date <= endDate);
+
+      return filteredData;
+    }
+
+    // Fungsi untuk menghitung dan menampilkan ringkasan keuangan semua cabang
+    function renderFinancialSummary(data) {
+      // Total pendapatan
+      const totalRevenue = data.reduce((sum, item) => sum + (item.total || 0), 0);
+
+      // Total modal produksi (HPP)
+      const totalProductionCost = data.reduce((sum, item) => {
+        const costPerUnit = productionCosts[item.product] || 0;
+        return sum + (costPerUnit * (item.quantity || 0));
+      }, 0);
+
+      // Laba kotor
+      const grossProfit = totalRevenue - totalProductionCost;
+
+      // Laba dari penjualan reseller
+      const resellerProfit = data
+        .filter(item => item.saleType === 'reseller')
+        .reduce((sum, item) => {
+          const costPerUnit = productionCosts[item.product] || 0;
+          const revenue = (item.total || 0);
+          const cost = costPerUnit * (item.quantity || 0);
+          return sum + (revenue - cost);
+        }, 0);
+
+      // Laba dari penjualan onhand
+      const onhandProfit = data
+        .filter(item => item.saleType === 'onhand')
+        .reduce((sum, item) => {
+          const costPerUnit = productionCosts[item.product] || 0;
+          const revenue = (item.total || 0);
+          const cost = costPerUnit * (item.quantity || 0);
+          return sum + (revenue - cost);
+        }, 0);
+
+      // Update DOM
+      document.getElementById('totalRevenue').textContent = formatRupiah(totalRevenue);
+      document.getElementById('totalProductionCost').textContent = formatRupiah(totalProductionCost);
+      document.getElementById('grossProfit').textContent = formatRupiah(grossProfit);
+      document.getElementById('resellerProfit').textContent = formatRupiah(resellerProfit);
+      document.getElementById('onhandProfit').textContent = formatRupiah(onhandProfit);
+    }
+
+    // Fungsi untuk menghitung dan menampilkan pendapatan per cabang
+    function renderBranchRevenue(data) {
+      const branchSummaries = {
+        "Jablay 1 (Zhidan)": { gross: 0, reseller: 0, onhand: 0 },
+        "Jablay 2 (Reyhan)": { gross: 0, reseller: 0, onhand: 0 },
+        "Jablay 3 (Tangsel)": { gross: 0, reseller: 0, onhand: 0 }
+      };
+
+      data.forEach(item => {
+        const branch = item.branch || "Tidak Diketahui";
+        if (branchSummaries.hasOwnProperty(branch)) {
+          const grossRevenue = item.total || 0;
+
+          branchSummaries[branch].gross += grossRevenue;
+
+          if (item.saleType === 'reseller') {
+            branchSummaries[branch].reseller += grossRevenue;
+          } else if (item.saleType === 'onhand') {
+            branchSummaries[branch].onhand += grossRevenue;
+          }
+        }
+      });
+
+      // Update DOM untuk setiap cabang
+      document.getElementById('grossRevenueJablay1').textContent = formatRupiah(branchSummaries["Jablay 1 (Zhidan)"].gross);
+      document.getElementById('resellerRevenueJablay1').textContent = formatRupiah(branchSummaries["Jablay 1 (Zhidan)"].reseller);
+      document.getElementById('onhandRevenueJablay1').textContent = formatRupiah(branchSummaries["Jablay 1 (Zhidan)"].onhand);
+
+      document.getElementById('grossRevenueJablay2').textContent = formatRupiah(branchSummaries["Jablay 2 (Reyhan)"].gross);
+      document.getElementById('resellerRevenueJablay2').textContent = formatRupiah(branchSummaries["Jablay 2 (Reyhan)"].reseller);
+      document.getElementById('onhandRevenueJablay2').textContent = formatRupiah(branchSummaries["Jablay 2 (Reyhan)"].onhand);
+
+      document.getElementById('grossRevenueJablay3').textContent = formatRupiah(branchSummaries["Jablay 3 (Tangsel)"].gross);
+      document.getElementById('resellerRevenueJablay3').textContent = formatRupiah(branchSummaries["Jablay 3 (Tangsel)"].reseller);
+      document.getElementById('onhandRevenueJablay3').textContent = formatRupiah(branchSummaries["Jablay 3 (Tangsel)"].onhand);
+    }
+
+    // Fungsi untuk mengatur collapsible
+    function setupCollapsible() {
+      const collapsibles = document.getElementsByClassName('collapsible');
+      for (let i = 0; i < collapsibles.length; i++) {
+        collapsibles[i].addEventListener('click', function() {
+          const content = this.nextElementSibling;
+          content.classList.toggle('hidden');
+        });
+      }
+    }
+
+    // Filter berdasarkan rentang tanggal
+    document.getElementById('startDate').addEventListener('change', async function() {
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderFinancialSummary(filteredData);
+      renderBranchRevenue(filteredData);
+    });
+
+    document.getElementById('endDate').addEventListener('change', async function() {
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderFinancialSummary(filteredData);
+      renderBranchRevenue(filteredData);
+    });
+
+    // Reset filter
+    document.getElementById('resetFilter').addEventListener('click', async function() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderFinancialSummary(filteredData);
+      renderBranchRevenue(filteredData);
+    });
+
+    // Inisialisasi
+    async function init() {
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+      renderFinancialSummary(filteredData);
+      renderBranchRevenue(filteredData);
+      setupCollapsible();
+    }
+    init();
+  </script>
+</body>
+</html>
