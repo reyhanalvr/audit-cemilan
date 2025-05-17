@@ -13,7 +13,7 @@ app.use(express.json());
 
 // Konfigurasi CORS
 const corsOptions = {
-  origin: 'https://audit-sijablay.vercel.app', // Ganti dengan domain frontend Anda
+  origin: 'https://audit-sijablay.vercel.app', // Domain frontend Anda
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
@@ -26,6 +26,9 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
+
+// Kata sandi untuk autentikasi (disimpan di .env untuk keamanan)
+const PASSWORD = process.env.AUTH_PASSWORD;
 
 pool.connect((err) => {
   if (err) {
@@ -114,6 +117,21 @@ async function updateOrAddStock(product, branch, quantity) {
     return stockId;
   }
 }
+
+// Endpoint: Autentikasi
+app.post('/api/auth', async (req, res) => {
+  const { password } = req.body;
+
+  if (!password) {
+    return res.status(400).json({ success: false, message: 'Kata sandi diperlukan' });
+  }
+
+  if (password === PASSWORD) {
+    return res.status(200).json({ success: true, message: 'Autentikasi berhasil' });
+  } else {
+    return res.status(401).json({ success: false, message: 'Kata sandi salah' });
+  }
+});
 
 // Endpoint: Mendapatkan semua transaksi penjualan
 app.get('/api/sales', async (req, res) => {
@@ -526,8 +544,8 @@ app.get('/api/sales/summary', async (req, res) => {
     };
     result.rows.forEach(row => {
       console.log('Row data:', row);
-      console.log('Type of totalsold:', typeof row.totalsold); // Perbaiki ke totalsold
-      const totalSoldValue = Number(row.totalsold); // Perbaiki ke totalsold
+      console.log('Type of totalsold:', typeof row.totalsold);
+      const totalSoldValue = Number(row.totalsold);
       if (['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(row.branch)) {
         if (!summary[row.branch]) summary[row.branch] = {};
         summary[row.branch][row.product] = isNaN(totalSoldValue) ? 0 : totalSoldValue;
@@ -536,7 +554,7 @@ app.get('/api/sales/summary', async (req, res) => {
 
     const branchTotals = {};
     result.rows.forEach(row => {
-      const totalSoldValue = Number(row.totalsold); // Perbaiki ke totalsold
+      const totalSoldValue = Number(row.totalsold);
       const totalSold = isNaN(totalSoldValue) ? 0 : totalSoldValue;
       console.log(`Adding to ${row.branch}: ${totalSold}`);
       if (['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(row.branch)) {
