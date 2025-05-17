@@ -514,7 +514,7 @@ app.delete('/api/productions/:id', async (req, res) => {
 app.get('/api/sales/summary', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT TRIM("branch") as branch, TRIM("product") as product, COALESCE(SUM("quantity"), 0) as totalSold
+      SELECT TRIM("branch") as branch, TRIM("product") as product, COALESCE(SUM("quantity"), 0) as totalsold
       FROM sales
       GROUP BY TRIM("branch"), TRIM("product")
     `);
@@ -526,8 +526,8 @@ app.get('/api/sales/summary', async (req, res) => {
     };
     result.rows.forEach(row => {
       console.log('Row data:', row);
-      console.log('Type of totalSold:', typeof row.totalSold); // Log tipe data
-      const totalSoldValue = Number(row.totalSold); // Gunakan Number untuk konversi
+      console.log('Type of totalsold:', typeof row.totalsold); // Perbaiki ke totalsold
+      const totalSoldValue = Number(row.totalsold); // Perbaiki ke totalsold
       if (['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(row.branch)) {
         if (!summary[row.branch]) summary[row.branch] = {};
         summary[row.branch][row.product] = isNaN(totalSoldValue) ? 0 : totalSoldValue;
@@ -536,7 +536,7 @@ app.get('/api/sales/summary', async (req, res) => {
 
     const branchTotals = {};
     result.rows.forEach(row => {
-      const totalSoldValue = Number(row.totalSold);
+      const totalSoldValue = Number(row.totalsold); // Perbaiki ke totalsold
       const totalSold = isNaN(totalSoldValue) ? 0 : totalSoldValue;
       console.log(`Adding to ${row.branch}: ${totalSold}`);
       if (['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(row.branch)) {
