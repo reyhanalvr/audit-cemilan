@@ -186,8 +186,12 @@
 
   <!-- Modal untuk Edit -->
   <div id="editModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
-    <div class="bg-white p-4 sm:p-6 rounded-lg w-full max-w-lg max-h-screen overflow-y-auto shadow-lg">
-      <h2 class="text-xl font-semibold mb-4">Edit Transaksi</h2>
+    <div class="bg-white p-4 sm:p-6 rounded-lg w-full max-w-lg max-h-screen overflow-y-auto shadow-lg relative">
+      <div class="absolute top-4 right-4 flex gap-2">
+        <button type="button" id="cancelEdit" class="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 text-sm sm:text-base">Batal</button>
+        <button type="submit" form="editForm" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm sm:text-base">Simpan</button>
+      </div>
+      <h2 class="text-xl font-semibold mb-4 text-center">Edit Transaksi</h2>
       <form id="editForm" class="space-y-3">
         <input type="hidden" id="editId">
         <div class="grid grid-cols-1 gap-3">
@@ -255,10 +259,6 @@
             <label for="editDescription" class="block mb-1 text-sm sm:text-base">Deskripsi</label>
             <textarea id="editDescription" class="w-full border p-2 rounded text-sm sm:text-base" rows="3" placeholder="Masukkan deskripsi (opsional)"></textarea>
           </div>
-        </div>
-        <div class="flex justify-end gap-2 mt-4">
-          <button type="button" id="cancelEdit" class="bg-gray-500 text-white px-3 py-1 sm:px-4 sm:py-2 rounded hover:bg-gray-600 text-sm sm:text-base">Batal</button>
-          <button type="submit" class="bg-blue-500 text-white px-3 py-1 sm:px-4 sm:py-2 rounded hover:bg-blue-600 text-sm sm:text-base">Simpan</button>
         </div>
       </form>
     </div>
