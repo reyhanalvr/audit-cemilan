@@ -449,7 +449,6 @@
       }
     });
 
-    // Handle submit form edit stok
     document.getElementById('editForm').addEventListener('submit', async function(e) {
       e.preventDefault();
 
@@ -471,8 +470,11 @@
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
         console.log('Stok berhasil diedit:', id);
-        // Catat riwayat
-        await logStockHistory('EDIT', product, quantity, branch);
+        // Catat riwayat dengan perubahan bersih
+        const stocks = await fetchStocks();
+        const stockBefore = stocks.find(item => item.id === id); // Ambil stok sebelum edit
+        const change = quantity - stockBefore.quantity; // Hitung perubahan
+        await logStockHistory('EDIT', product, change, branch);
         // Render ulang tabel stok dan riwayat
         await renderStockTables();
         await renderStockHistory();

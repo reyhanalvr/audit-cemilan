@@ -105,9 +105,10 @@ pool.connect((err) => {
 
 // Fungsi untuk generate ID
 async function generateId(prefix, table) {
-  const result = await pool.query(`SELECT COUNT(*) as count FROM ${table}`);
-  const count = parseInt(result.rows[0].count) + 1;
-  return `${prefix}${String(count).padStart(3, '0')}`;
+  const result = await pool.query(`SELECT id FROM ${table} ORDER BY id DESC LIMIT 1`);
+  const lastId = result.rows[0]?.id || `${prefix}000`;
+  const num = parseInt(lastId.replace(prefix, '')) + 1;
+  return `${prefix}${num.toString().padStart(3, '0')}`;
 }
 
 // Fungsi untuk mencari stok berdasarkan product dan branch
@@ -326,38 +327,34 @@ app.post('/api/stock', async (req, res) => {
 
 // Endpoint: Mengedit stok
 app.put('/api/stock/:id', async (req, res) => {
+  const { id } = req.params;
   const { product, quantity, branch } = req.body;
-  if (!branch || !['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(branch)) {
-    res.status(400).json({ error: 'Cabang tidak valid.' });
-    return;
-  }
-  if (quantity < 0) {
-    res.status(400).json({ error: 'Jumlah stok tidak boleh negatif.' });
-    return;
-  }
 
-  const sql = 'UPDATE stock SET "product" = $1, "quantity" = $2, "branch" = $3 WHERE id = $4';
   try {
-    const oldStockResult = await pool.query('SELECT * FROM stock WHERE id = $1', [req.params.id]);
-    const oldStock = oldStockResult.rows[0];
-    if (!oldStock) {
-      res.status(404).json({ error: 'Stok tidak ditemukan.' });
-      return;
+    // Ambil stok sebelumnya
+    const stockBeforeResult = await pool.query('SELECT * FROM stock WHERE id = $1', [id]);
+    const stockBefore = stockBeforeResult.rows[0];
+    if (!stockBefore) {
+      return res.status(404).json({ error: 'Stok tidak ditemukan' });
     }
-    const quantityDifference = quantity - oldStock.quantity;
 
-    const result = await pool.query(sql, [product, quantity, branch, req.params.id]);
-    if (result.rowCount === 0) {
-      res.status(404).json({ error: 'Stok tidak ditemukan.' });
-      return;
-    }
-    // Catat riwayat
-    await logStockHistory('EDIT', product, quantityDifference, branch);
-    console.log('Stok diperbarui:', { id: req.params.id });
-    res.status(200).send();
-  } catch (err) {
-    console.error('Error saat mengedit stok:', err.message);
-    res.status(500).json({ error: err.message });
+    // Hitung perubahan
+    const change = quantity - stockBefore.quantity;
+
+    // Update stok
+    const result = await pool.query(
+      'UPDATE stock SET product = $1, quantity = $2, branch = $3 WHERE id = $4 RETURNING *',
+      [product, quantity, branch, id]
+    );
+    const updatedStock = result.rows[0];
+
+    // Catat riwayat dengan perubahan bersih
+    await logStockHistory('EDIT', product, change, branch);
+
+    res.status(200).json(updatedStock);
+  } catch (error) {
+    console.error('Error saat mengedit stok:', error);
+    res.status(500).json({ error: 'Gagal mengedit stok' });
   }
 });
 
