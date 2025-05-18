@@ -134,6 +134,18 @@ async function updateOrAddStock(product, branch, quantity) {
 // Fungsi untuk mencatat riwayat stok
 async function logStockHistory(action, product, quantity, branch, toBranch = null) {
   const historyId = await generateId('HIST', 'stock_history');
+  // Cek duplikat dalam 5 detik terakhir
+  const checkQuery = `
+    SELECT COUNT(*) as count 
+    FROM stock_history 
+    WHERE "action" = $1 AND "product" = $2 AND "quantity" = $3 AND "branch" = $4 
+    AND "toBranch" = $5 AND "timestamp" > NOW() - INTERVAL '5 seconds'
+  `;
+  const checkResult = await pool.query(checkQuery, [action, product, quantity, branch, toBranch]);
+  if (checkResult.rows[0].count > 0) {
+    console.log(`Duplikat ditemukan untuk ${product}, ${action}, ${quantity} di ${branch}. Abaikan.`);
+    return; // Abaikan jika duplikat ditemukan
+  }
   await pool.query(
     'INSERT INTO stock_history (id, "action", "product", "quantity", "branch", "toBranch") VALUES ($1, $2, $3, $4, $5, $6)',
     [historyId, action, product, quantity, branch, toBranch]

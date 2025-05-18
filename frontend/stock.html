@@ -109,7 +109,7 @@
           </select>
         </div>
         <div class="sm:col-span-3">
-          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Tambah Stok</button>
+          <button type="submit" id="addStockBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Tambah Stok</button>
         </div>
       </form>
     </div>
@@ -240,7 +240,7 @@
         </div>
         <div class="flex justify-end gap-2">
           <button type="button" id="cancelEdit" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Batal</button>
-          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Simpan</button>
+          <button type="submit" id="saveEditBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Simpan</button>
         </div>
       </form>
     </div>
@@ -267,7 +267,7 @@
         </div>
         <div class="flex justify-end gap-2">
           <button type="button" id="cancelTransfer" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Batal</button>
-          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Pindah</button>
+          <button type="submit" id="transferStockBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Pindah</button>
         </div>
       </form>
     </div>
@@ -336,6 +336,10 @@
     document.getElementById('stockForm').addEventListener('submit', async function(e) {
       e.preventDefault();
 
+      const addStockBtn = document.getElementById('addStockBtn');
+      if (addStockBtn.disabled) return; // Cegah pengiriman berulang
+      addStockBtn.disabled = true;
+
       const product = document.getElementById('product').value;
       const quantity = parseInt(document.getElementById('quantity').value);
       const branch = document.getElementById('branch').value;
@@ -362,6 +366,8 @@
       } catch (error) {
         console.error('Error saat menambah stok:', error);
         alert(`Gagal menambah stok: ${error.message}`);
+      } finally {
+        addStockBtn.disabled = false; // Aktifkan kembali tombol
       }
     });
 
@@ -382,7 +388,11 @@
 
       if (e.target.classList.contains('deleteBtn')) {
         if (confirm('Yakin ingin menghapus stok ini?')) {
-          const id = e.target.dataset.id;
+          const deleteBtn = e.target;
+          if (deleteBtn.disabled) return; // Cegah klik berulang
+          deleteBtn.disabled = true;
+
+          const id = deleteBtn.dataset.id;
           const stocks = await fetchStocks();
           const stock = stocks.find(item => item.id === id);
           
@@ -401,6 +411,8 @@
           } catch (error) {
             console.error('Error saat menghapus stok:', error);
             alert('Gagal menghapus stok.');
+          } finally {
+            deleteBtn.disabled = false; // Aktifkan kembali tombol
           }
         }
       }
@@ -441,6 +453,10 @@
     document.getElementById('editForm').addEventListener('submit', async function(e) {
       e.preventDefault();
 
+      const saveEditBtn = document.getElementById('saveEditBtn');
+      if (saveEditBtn.disabled) return; // Cegah pengiriman berulang
+      saveEditBtn.disabled = true;
+
       const id = document.getElementById('editId').value;
       const product = document.getElementById('editProduct').value;
       const quantity = parseInt(document.getElementById('editQuantity').value);
@@ -464,12 +480,18 @@
       } catch (error) {
         console.error('Error saat mengedit stok:', error);
         alert('Gagal mengedit stok.');
+      } finally {
+        saveEditBtn.disabled = false; // Aktifkan kembali tombol
       }
     });
 
     // Handle submit form pindah stok
     document.getElementById('transferForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+
+      const transferStockBtn = document.getElementById('transferStockBtn');
+      if (transferStockBtn.disabled) return; // Cegah pengiriman berulang
+      transferStockBtn.disabled = true;
 
       const id = document.getElementById('transferId').value;
       const product = document.getElementById('transferProduct').value;
@@ -498,6 +520,8 @@
       } catch (error) {
         console.error('Error saat memindahkan stok:', error);
         alert(`Gagal memindahkan stok: ${error.message}`);
+      } finally {
+        transferStockBtn.disabled = false; // Aktifkan kembali tombol
       }
     });
 
