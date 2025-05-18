@@ -72,6 +72,19 @@ pool.connect((err) => {
         "distributed" TEXT DEFAULT '{}'
       )
     `);
+    // Buat tabel stock_history untuk melacak riwayat
+    pool.query(`
+      CREATE TABLE IF NOT EXISTS stock_history (
+        id TEXT PRIMARY KEY,
+        "action" TEXT NOT NULL, -- ADD, DELETE, EDIT, TRANSFER
+        "product" TEXT NOT NULL,
+        "quantity" INTEGER NOT NULL,
+        "branch" TEXT NOT NULL,
+        "toBranch" TEXT,
+        "timestamp" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        "user" TEXT DEFAULT 'System'
+      )
+    `);
     // Inisialisasi stok awal per cabang jika belum ada
     pool.query('SELECT COUNT(*) as count FROM stock', (err, result) => {
       if (err) {
@@ -116,6 +129,15 @@ async function updateOrAddStock(product, branch, quantity) {
     await pool.query('INSERT INTO stock (id, "product", "branch", "quantity") VALUES ($1, $2, $3, $4)', [stockId, product, branch, quantity]);
     return stockId;
   }
+}
+
+// Fungsi untuk mencatat riwayat stok
+async function logStockHistory(action, product, quantity, branch, toBranch = null) {
+  const historyId = await generateId('HIST', 'stock_history');
+  await pool.query(
+    'INSERT INTO stock_history (id, "action", "product", "quantity", "branch", "toBranch") VALUES ($1, $2, $3, $4, $5, $6)',
+    [historyId, action, product, quantity, branch, toBranch]
+  );
 }
 
 // Endpoint: Autentikasi
@@ -281,6 +303,8 @@ app.post('/api/stock', async (req, res) => {
 
   try {
     const stockId = await updateOrAddStock(product, branch, quantity);
+    // Catat riwayat
+    await logStockHistory('ADD', product, quantity, branch);
     res.status(201).json({ id: stockId });
   } catch (err) {
     console.error('Error saat menambah/memperbarui stok:', err.message);
@@ -302,11 +326,21 @@ app.put('/api/stock/:id', async (req, res) => {
 
   const sql = 'UPDATE stock SET "product" = $1, "quantity" = $2, "branch" = $3 WHERE id = $4';
   try {
+    const oldStockResult = await pool.query('SELECT * FROM stock WHERE id = $1', [req.params.id]);
+    const oldStock = oldStockResult.rows[0];
+    if (!oldStock) {
+      res.status(404).json({ error: 'Stok tidak ditemukan.' });
+      return;
+    }
+    const quantityDifference = quantity - oldStock.quantity;
+
     const result = await pool.query(sql, [product, quantity, branch, req.params.id]);
     if (result.rowCount === 0) {
       res.status(404).json({ error: 'Stok tidak ditemukan.' });
       return;
     }
+    // Catat riwayat
+    await logStockHistory('EDIT', product, quantityDifference, branch);
     console.log('Stok diperbarui:', { id: req.params.id });
     res.status(200).send();
   } catch (err) {
@@ -318,11 +352,20 @@ app.put('/api/stock/:id', async (req, res) => {
 // Endpoint: Menghapus stok
 app.delete('/api/stock/:id', async (req, res) => {
   try {
+    const stockResult = await pool.query('SELECT * FROM stock WHERE id = $1', [req.params.id]);
+    const stock = stockResult.rows[0];
+    if (!stock) {
+      res.status(404).json({ error: 'Stok tidak ditemukan.' });
+      return;
+    }
+
     const result = await pool.query('DELETE FROM stock WHERE id = $1', [req.params.id]);
     if (result.rowCount === 0) {
       res.status(404).json({ error: 'Stok tidak ditemukan.' });
       return;
     }
+    // Catat riwayat
+    await logStockHistory('DELETE', stock.product, stock.quantity, stock.branch);
     console.log('Stok dihapus:', { id: req.params.id });
     res.status(204).send();
   } catch (err) {
@@ -365,10 +408,58 @@ app.post('/api/stock/transfer', async (req, res) => {
   try {
     await pool.query('UPDATE stock SET "quantity" = "quantity" - $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, fromBranch]);
     await updateOrAddStock(product, toBranch, quantity);
+    // Catat riwayat
+    await logStockHistory('TRANSFER', product, quantity, fromBranch, toBranch);
     console.log(`Stok dipindahkan: ${quantity} unit ${product} dari ${fromBranch} ke ${toBranch}`);
     res.status(200).json({ message: 'Stok berhasil dipindahkan.' });
   } catch (err) {
     console.error('Error saat memindahkan stok:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint: Mendapatkan riwayat stok
+app.get('/api/stock/history', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM stock_history ORDER BY "timestamp" DESC');
+    console.log('Data riwayat stok yang dikembalikan:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error saat mengambil riwayat stok:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint: Menambah riwayat stok (opsional, untuk fleksibilitas)
+app.post('/api/stock/history', async (req, res) => {
+  const { action, product, quantity, branch, toBranch } = req.body;
+  if (!['ADD', 'DELETE', 'EDIT', 'TRANSFER'].includes(action)) {
+    res.status(400).json({ error: 'Aksi tidak valid.' });
+    return;
+  }
+  if (!branch || !['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(branch)) {
+    res.status(400).json({ error: 'Cabang tidak valid.' });
+    return;
+  }
+  if (quantity < 0) {
+    res.status(400).json({ error: 'Jumlah tidak boleh negatif.' });
+    return;
+  }
+  if (action === 'TRANSFER' && !toBranch) {
+    res.status(400).json({ error: 'Cabang tujuan diperlukan untuk TRANSFER.' });
+    return;
+  }
+
+  try {
+    const historyId = await generateId('HIST', 'stock_history');
+    await pool.query(
+      'INSERT INTO stock_history (id, "action", "product", "quantity", "branch", "toBranch") VALUES ($1, $2, $3, $4, $5, $6)',
+      [historyId, action, product, quantity, branch, toBranch]
+    );
+    console.log('Riwayat stok ditambahkan:', { id: historyId });
+    res.status(201).json({ id: historyId });
+  } catch (err) {
+    console.error('Error saat mencatat riwayat stok:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -472,6 +563,8 @@ app.put('/api/productions/:id', async (req, res) => {
         }
         if (qty > 0) {
           await updateOrAddStock(productName, branch, qty);
+          // Catat riwayat distribusi
+          await logStockHistory('ADD', productName, qty, branch);
         }
       }
     }
