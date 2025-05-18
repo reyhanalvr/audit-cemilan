@@ -184,85 +184,85 @@
     </div>
   </div>
 
-<!-- Modal untuk Edit -->
-<div id="editModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-lg w-full max-w-2xl md:max-w-lg sm:max-w-md shadow-lg">
-    <h2 class="text-xl font-semibold mb-4">Edit Transaksi</h2>
-    <form id="editForm" class="space-y-4">
-      <input type="hidden" id="editId">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="mb-4">
-          <label for="editDate" class="block mb-1">Tanggal</label>
-          <input type="date" id="editDate" class="w-full border p-2 rounded" required>
+  <!-- Modal untuk Edit -->
+  <div id="editModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white p-4 sm:p-6 rounded-lg w-full max-w-lg max-h-screen overflow-y-auto shadow-lg">
+      <h2 class="text-xl font-semibold mb-4">Edit Transaksi</h2>
+      <form id="editForm" class="space-y-3">
+        <input type="hidden" id="editId">
+        <div class="grid grid-cols-1 gap-3">
+          <div>
+            <label for="editDate" class="block mb-1 text-sm sm:text-base">Tanggal</label>
+            <input type="date" id="editDate" class="w-full border p-2 rounded text-sm sm:text-base" required>
+          </div>
+          <div>
+            <label for="editSaleType" class="block mb-1 text-sm sm:text-base">Tipe Penjualan</label>
+            <select id="editSaleType" class="w-full border p-2 rounded text-sm sm:text-base" required>
+              <option value="onhand">On Hand</option>
+              <option value="reseller">Reseller</option>
+            </select>
+          </div>
+          <div>
+            <label for="editProduct" class="block mb-1 text-sm sm:text-base">Produk</label>
+            <select id="editProduct" class="w-full border p-2 rounded text-sm sm:text-base" required>
+              <option value="Basreng 100Gr">Basreng 100Gr</option>
+              <option value="Basreng 200Gr">Basreng 200Gr</option>
+              <option value="Makaroni 100Gr">Makaroni 100Gr</option>
+              <option value="Makaroni 200Gr">Makaroni 200Gr</option>
+              <option value="Keripik Kaca 50Gr">Keripik Kaca 50Gr</option>
+              <option value="Kripik Kaca 110Gr">Kripik Kaca 110Gr</option>
+              <option value="Singkong 100Gr">Singkong 100Gr</option>
+            </select>
+          </div>
+          <div>
+            <label for="editBranch" class="block mb-1 text-sm sm:text-base">Cabang</label>
+            <select id="editBranch" class="w-full border p-2 rounded text-sm sm:text-base" required>
+              <option value="Jablay 1 (Zhidan)">Jablay 1 (Zhidan)</option>
+              <option value="Jablay 2 (Reyhan)">Jablay 2 (Reyhan)</option>
+              <option value="Jablay 3 (Tangsel)">Jablay 3 (Tangsel)</option>
+            </select>
+          </div>
+          <div>
+            <label for="editQuantity" class="block mb-1 text-sm sm:text-base">Jumlah</label>
+            <input type="number" id="editQuantity" class="w-full border p-2 rounded text-sm sm:text-base" min="1" required>
+          </div>
+          <div>
+            <label for="editUnitPrice" class="block mb-1 text-sm sm:text-base">Harga Satuan (Rp)</label>
+            <input type="number" id="editUnitPrice" class="w-full border p-2 rounded text-sm sm:text-base" min="0" required>
+          </div>
+          <div>
+            <label for="editPaymentMethod" class="block mb-1 text-sm sm:text-base">Metode Pembayaran</label>
+            <select id="editPaymentMethod" class="w-full border p-2 rounded text-sm sm:text-base" required>
+              <option value="Transfer Bank">Transfer Bank</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </div>
+          <div>
+            <label for="editStatus" class="block mb-1 text-sm sm:text-base">Status</label>
+            <select id="editStatus" class="w-full border p-2 rounded text-sm sm:text-base" required>
+              <option value="Selesai">Selesai</option>
+              <option value="Dikembalikan">Dikembalikan</option>
+            </select>
+          </div>
+          <div>
+            <label for="editPaymentStatus" class="block mb-1 text-sm sm:text-base">Status Pembayaran</label>
+            <select id="editPaymentStatus" class="w-full border p-2 rounded text-sm sm:text-base" required>
+              <option value="Lunas">Lunas</option>
+              <option value="Belum Lunas">Belum Lunas</option>
+            </select>
+          </div>
+          <div>
+            <label for="editDescription" class="block mb-1 text-sm sm:text-base">Deskripsi</label>
+            <textarea id="editDescription" class="w-full border p-2 rounded text-sm sm:text-base" rows="3" placeholder="Masukkan deskripsi (opsional)"></textarea>
+          </div>
         </div>
-        <div class="mb-4">
-          <label for="editSaleType" class="block mb-1">Tipe Penjualan</label>
-          <select id="editSaleType" class="w-full border p-2 rounded" required>
-            <option value="onhand">On Hand</option>
-            <option value="reseller">Reseller</option>
-          </select>
+        <div class="flex justify-end gap-2 mt-4">
+          <button type="button" id="cancelEdit" class="bg-gray-500 text-white px-3 py-1 sm:px-4 sm:py-2 rounded hover:bg-gray-600 text-sm sm:text-base">Batal</button>
+          <button type="submit" class="bg-blue-500 text-white px-3 py-1 sm:px-4 sm:py-2 rounded hover:bg-blue-600 text-sm sm:text-base">Simpan</button>
         </div>
-        <div class="mb-4">
-          <label for="editProduct" class="block mb-1">Produk</label>
-          <select id="editProduct" class="w-full border p-2 rounded" required>
-            <option value="Basreng 100Gr">Basreng 100Gr</option>
-            <option value="Basreng 200Gr">Basreng 200Gr</option>
-            <option value="Makaroni 100Gr">Makaroni 100Gr</option>
-            <option value="Makaroni 200Gr">Makaroni 200Gr</option>
-            <option value="Keripik Kaca 50Gr">Keripik Kaca 50Gr</option>
-            <option value="Kripik Kaca 110Gr">Kripik Kaca 110Gr</option>
-            <option value="Singkong 100Gr">Singkong 100Gr</option>
-          </select>
-        </div>
-        <div class="mb-4">
-          <label for="editBranch" class="block mb-1">Cabang</label>
-          <select id="editBranch" class="w-full border p-2 rounded" required>
-            <option value="Jablay 1 (Zhidan)">Jablay 1 (Zhidan)</option>
-            <option value="Jablay 2 (Reyhan)">Jablay 2 (Reyhan)</option>
-            <option value="Jablay 3 (Tangsel)">Jablay 3 (Tangsel)</option>
-          </select>
-        </div>
-        <div class="mb-4">
-          <label for="editQuantity" class="block mb-1">Jumlah</label>
-          <input type="number" id="editQuantity" class="w-full border p-2 rounded" min="1" required>
-        </div>
-        <div class="mb-4">
-          <label for="editUnitPrice" class="block mb-1">Harga Satuan (Rp)</label>
-          <input type="number" id="editUnitPrice" class="w-full border p-2 rounded" min="0" required>
-        </div>
-        <div class="mb-4">
-          <label for="editPaymentMethod" class="block mb-1">Metode Pembayaran</label>
-          <select id="editPaymentMethod" class="w-full border p-2 rounded" required>
-            <option value="Transfer Bank">Transfer Bank</option>
-            <option value="Cash">Cash</option>
-          </select>
-        </div>
-        <div class="mb-4">
-          <label for="editStatus" class="block mb-1">Status</label>
-          <select id="editStatus" class="w-full border p-2 rounded" required>
-            <option value="Selesai">Selesai</option>
-            <option value="Dikembalikan">Dikembalikan</option>
-          </select>
-        </div>
-        <div class="mb-4">
-          <label for="editPaymentStatus" class="block mb-1">Status Pembayaran</label>
-          <select id="editPaymentStatus" class="w-full border p-2 rounded" required>
-            <option value="Lunas">Lunas</option>
-            <option value="Belum Lunas">Belum Lunas</option>
-          </select>
-        </div>
-        <div class="sm:col-span-2 mb-4">
-          <label for="editDescription" class="block mb-1">Deskripsi</label>
-          <textarea id="editDescription" class="w-full border p-2 rounded" rows="3" placeholder="Masukkan deskripsi (opsional)"></textarea>
-        </div>
-      </div>
-      <div class="flex justify-end gap-2">
-        <button type="button" id="cancelEdit" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Batal</button>
-        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Simpan</button>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
-</div>
 
   <script>
     let salesChart;
