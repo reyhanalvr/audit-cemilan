@@ -117,16 +117,17 @@ async function findStock(product, branch) {
   return result.rows[0];
 }
 
-// Fungsi untuk mengupdate atau menambah stok
+// Fungsi untuk memperbarui atau menambah stok
 async function updateOrAddStock(product, branch, quantity) {
+  console.log(`Updating/Adding stock: product=${product}, branch=${branch}, quantity=${quantity}`);
   const stock = await findStock(product, branch);
   if (stock) {
-    // Update stok yang sudah ada
+    console.log(`Stock found, updating: id=${stock.id}, current quantity=${stock.quantity}`);
     await pool.query('UPDATE stock SET "quantity" = "quantity" + $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, branch]);
     return stock.id;
   } else {
-    // Tambah stok baru
-    const stockId = await generateId('STK', 'stock');
+    console.log('Stock not found, creating new entry');
+    const stockId = await generateId('STCK', 'stock');
     await pool.query('INSERT INTO stock (id, "product", "branch", "quantity") VALUES ($1, $2, $3, $4)', [stockId, product, branch, quantity]);
     return stockId;
   }
@@ -310,20 +311,27 @@ app.post('/api/stock', async (req, res) => {
   const { product, quantity, branch } = req.body;
 
   try {
-    const stockId = await generateId('STCK', 'stock');
-    const result = await pool.query(
-      'INSERT INTO stock (id, product, quantity, branch) VALUES ($1, $2, $3, $4) RETURNING *',
-      [stockId, product, quantity, branch]
-    );
-    const newStock = result.rows[0];
+    // Validasi input
+    if (!product || !branch || quantity == null || quantity < 0) {
+      return res.status(400).json({ error: 'Product, branch, dan quantity wajib diisi, quantity tidak boleh negatif' });
+    }
+
+    // Gunakan fungsi updateOrAddStock untuk menangani penambahan stok
+    const stockId = await updateOrAddStock(product, branch, quantity);
 
     // Catat riwayat
     await logStockHistory('ADD', product, quantity, branch);
 
-    res.status(201).json(newStock);
+    // Ambil data stok yang diperbarui untuk respons
+    const updatedStock = await pool.query(
+      'SELECT * FROM stock WHERE id = $1',
+      [stockId]
+    );
+
+    res.status(201).json(updatedStock.rows[0]);
   } catch (error) {
     console.error('Error saat menambah stok:', error);
-    res.status(500).json({ error: 'Gagal menambah stok' });
+    res.status(500).json({ error: 'Gagal menambah stok', details: error.message });
   }
 });
 
