@@ -7,6 +7,19 @@
   <link rel="icon" type="image/png" href="assets/logo.jpg">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    .sort-indicator {
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+    th[data-sort="asc"] .sort-indicator::after {
+      content: '⬍';
+    }
+    th[data-sort="desc"] .sort-indicator::after {
+      content: '⬆';
+    }
+  </style>
 </head>
 <body class="bg-gray-100 font-sans">
   <!-- Navigasi -->
@@ -148,9 +161,9 @@
         <thead>
           <tr class="bg-gray-200 text-left">
             <th class="p-3 cursor-pointer" data-column="date" data-sort="asc">
-                  Tanggal
-                  <span class="sort-indicator ml-1">⬍</span>
-                </th>
+              Tanggal
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
             <th class="p-3">ID Transaksi</th>
             <th class="p-3">Produk</th>
             <th class="p-3">Cabang</th>
@@ -161,15 +174,15 @@
             <th class="p-3">Harga Satuan</th>
             <th class="p-3">Total</th>
             <th class="p-3 cursor-pointer" data-column="paymentMethod" data-sort="asc">
-                  Metode Pembayaran
-                  <span class="sort-indicator ml-1">⬍</span>
-                </th>
+              Metode Pembayaran
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
             <th class="p-3">Status</th>
             <th class="p-3">Tipe Penjualan</th>
             <th class="p-3 cursor-pointer" data-column="paymentStatus" data-sort="asc">
-                  Status Pembayaran
-                  <span class="sort-indicator ml-1">⬍</span>
-                </th>
+              Status Pembayaran
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
             <th class="p-3">Aksi</th>
           </tr>
         </thead>
@@ -277,6 +290,49 @@
   </div>
 
   <script>
+    // State untuk melacak kolom dan arah sorting
+    let currentSortColumn = 'date';
+    let currentSortDirection = 'asc';
+
+    // Fungsi untuk mengurutkan data
+    function sortData(data, column, direction) {
+      const sortedData = [...data]; // Buat salinan data agar tidak mengubah aslinya
+
+      sortedData.sort((a, b) => {
+        let valueA, valueB;
+
+        switch (column) {
+          case 'date':
+            valueA = new Date(a.date);
+            valueB = new Date(b.date);
+            break;
+          case 'quantity':
+            valueA = a.quantity;
+            valueB = b.quantity;
+            break;
+          case 'paymentMethod':
+            valueA = a.paymentMethod.toLowerCase();
+            valueB = b.paymentMethod.toLowerCase();
+            break;
+          case 'paymentStatus':
+            // Urutkan "Belum Lunas" sebelum "Lunas"
+            valueA = a.paymentStatus === 'Belum Lunas' ? 0 : 1;
+            valueB = b.paymentStatus === 'Belum Lunas' ? 0 : 1;
+            break;
+          default:
+            return 0;
+        }
+
+        if (direction === 'asc') {
+          return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+        } else {
+          return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
+        }
+      });
+
+      return sortedData;
+    }
+
     let salesChart;
     let quantityChart;
 
@@ -374,13 +430,17 @@
       const tbody = document.getElementById('salesTableBody');
       const noDataMessage = document.getElementById('noDataMessage');
       tbody.innerHTML = '';
-      if (data.length === 0) {
+
+      // Terapkan sorting
+      const sortedData = sortData(data, currentSortColumn, currentSortDirection);
+
+      if (sortedData.length === 0) {
         noDataMessage.classList.remove('hidden');
       } else {
         noDataMessage.classList.add('hidden');
-        data.forEach(item => {
+        sortedData.forEach(item => {
           const rowClass = item.paymentStatus === 'Lunas' ? 'bg-green-200' : 
-                           item.paymentStatus === 'Belum Lunas' ? 'bg-red-200' : '';
+                          item.paymentStatus === 'Belum Lunas' ? 'bg-red-200' : '';
           const row = document.createElement('tr');
           row.className = rowClass;
           row.innerHTML = `
@@ -416,11 +476,11 @@
         });
       }
 
-      const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
-      const totalPaid = data.filter(item => item.paymentStatus === 'Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
-      const totalUnpaid = data.filter(item => item.paymentStatus === 'Belum Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
-      const totalATM = data.filter(item => item.paymentMethod === 'Transfer Bank').reduce((sum, item) => sum + (item.total || 0), 0);
-      const totalCash = data.filter(item => item.paymentMethod === 'Cash').reduce((sum, item) => sum + (item.total || 0), 0);
+      const total = sortedData.reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalPaid = sortedData.filter(item => item.paymentStatus === 'Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalUnpaid = sortedData.filter(item => item.paymentStatus === 'Belum Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalATM = sortedData.filter(item => item.paymentMethod === 'Transfer Bank').reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalCash = sortedData.filter(item => item.paymentMethod === 'Cash').reduce((sum, item) => sum + (item.total || 0), 0);
 
       document.getElementById('totalSales').textContent = `Total Penjualan: ${formatRupiah(total)}`;
       document.getElementById('totalPaid').textContent = `Total Lunas: ${formatRupiah(totalPaid)}`;
@@ -429,7 +489,7 @@
       document.getElementById('totalCash').textContent = `Total Uang di Cash: ${formatRupiah(totalCash)}`;
       document.getElementById('anomaly').textContent = '';
 
-      updateCharts(data);
+      updateCharts(sortedData);
     }
 
     // Fungsi untuk update grafik
@@ -773,6 +833,27 @@
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderTable(filteredData);
+    });
+
+    // Event listener untuk sorting
+    document.querySelectorAll('th[data-column]').forEach(header => {
+      header.addEventListener('click', async () => {
+        const column = header.dataset.column;
+        const currentDirection = header.dataset.sort;
+        const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+
+        // Update state sorting
+        currentSortColumn = column;
+        currentSortDirection = newDirection;
+
+        // Update indikator sorting di header
+        header.dataset.sort = newDirection;
+
+        // Ambil data penjualan dan terapkan filter serta sorting
+        const sales = await fetchSales();
+        const filteredData = applyFilters(sales);
+        renderTable(filteredData);
+      });
     });
 
     // Inisialisasi
