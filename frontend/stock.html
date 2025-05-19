@@ -199,6 +199,7 @@
                 <th class="p-3">Jumlah</th>
                 <th class="p-3">Cabang Asal</th>
                 <th class="p-3">Cabang Tujuan</th>
+                <th class="p-3">Aksi</th> <!-- Kolom baru untuk tombol hapus -->
               </tr>
             </thead>
             <tbody id="stockHistoryTable"></tbody>
@@ -305,6 +306,9 @@
           <td class="p-3">${item.quantity}</td>
           <td class="p-3">${item.branch}</td>
           <td class="p-3">${item.toBranch || '-'}</td>
+          <td class="p-3">
+            <button class="deleteHistoryBtn bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" data-id="${item.id}">Hapus</button>
+          </td>
         `;
         historyTableBody.appendChild(row);
       });
