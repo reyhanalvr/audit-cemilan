@@ -164,21 +164,42 @@
               Tanggal
               <span class="sort-indicator ml-1">⬍</span>
             </th>
-            <th class="p-3">ID Transaksi</th>
-            <th class="p-3">Produk</th>
-            <th class="p-3">Cabang</th>
+            <th class="p-3 cursor-pointer" data-column="id" data-sort="asc">
+              ID Transaksi
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
+            <th class="p-3 cursor-pointer" data-column="product" data-sort="asc">
+              Produk
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
+            <th class="p-3 cursor-pointer" data-column="branch" data-sort="asc">
+              Cabang
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
             <th class="p-3 cursor-pointer" data-column="quantity" data-sort="asc">
               Jumlah
               <span class="sort-indicator ml-1">⬍</span>
             </th>
-            <th class="p-3">Harga Satuan</th>
-            <th class="p-3">Total</th>
+            <th class="p-3 cursor-pointer" data-column="unitPrice" data-sort="asc">
+              Harga Satuan
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
+            <th class="p-3 cursor-pointer" data-column="total" data-sort="asc">
+              Total
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
             <th class="p-3 cursor-pointer" data-column="paymentMethod" data-sort="asc">
               Metode Pembayaran
               <span class="sort-indicator ml-1">⬍</span>
             </th>
-            <th class="p-3">Status</th>
-            <th class="p-3">Tipe Penjualan</th>
+            <th class="p-3 cursor-pointer" data-column="status" data-sort="asc">
+              Status
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
+            <th class="p-3 cursor-pointer" data-column="saleType" data-sort="asc">
+              Tipe Penjualan
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
             <th class="p-3 cursor-pointer" data-column="paymentStatus" data-sort="asc">
               Status Pembayaran
               <span class="sort-indicator ml-1">⬍</span>
@@ -306,13 +327,41 @@
             valueA = new Date(a.date);
             valueB = new Date(b.date);
             break;
+          case 'id':
+            valueA = a.id.toLowerCase();
+            valueB = b.id.toLowerCase();
+            break;
+          case 'product':
+            valueA = a.product.toLowerCase();
+            valueB = b.product.toLowerCase();
+            break;
+          case 'branch':
+            valueA = a.branch.toLowerCase();
+            valueB = b.branch.toLowerCase();
+            break;
           case 'quantity':
             valueA = a.quantity;
             valueB = b.quantity;
             break;
+          case 'unitPrice':
+            valueA = a.unitPrice;
+            valueB = b.unitPrice;
+            break;
+          case 'total':
+            valueA = a.total;
+            valueB = b.total;
+            break;
           case 'paymentMethod':
             valueA = a.paymentMethod.toLowerCase();
             valueB = b.paymentMethod.toLowerCase();
+            break;
+          case 'status':
+            valueA = a.status.toLowerCase();
+            valueB = b.status.toLowerCase();
+            break;
+          case 'saleType':
+            valueA = (a.saleType || 'Tidak Diketahui').toLowerCase();
+            valueB = (b.saleType || 'Tidak Diketahui').toLowerCase();
             break;
           case 'paymentStatus':
             // Urutkan "Belum Lunas" sebelum "Lunas"
@@ -856,6 +905,13 @@
 
         // Update indikator sorting di header
         header.dataset.sort = newDirection;
+
+        // Reset indikator sorting di header lain
+        document.querySelectorAll('th[data-column]').forEach(h => {
+          if (h !== header) {
+            h.dataset.sort = 'asc';
+          }
+        });
 
         // Ambil data penjualan dan terapkan filter serta sorting
         const sales = await fetchSales();
