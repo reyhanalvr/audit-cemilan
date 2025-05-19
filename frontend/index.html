@@ -257,7 +257,7 @@
           </div>
           <div>
             <label for="editUnitPrice" class="block mb-1 text-sm sm:text-base">Harga Satuan (Rp)</label>
-            <input type="number" id="editUnitPrice" class="w-full border p-2 rounded text-sm sm:text-base" min="0" required>
+            <input type="number" id="editUnitPrice" class="w-full border p-2 rounded text-sm sm:text-base bg-gray-100" readonly required>
           </div>
           <div>
             <label for="editPaymentMethod" class="block mb-1 text-sm sm:text-base">Metode Pembayaran</label>
@@ -693,13 +693,12 @@
         document.getElementById('editProduct').value = sale.product;
         document.getElementById('editBranch').value = sale.branch;
         document.getElementById('editQuantity').value = sale.quantity;
-        document.getElementById('editUnitPrice').value = sale.unitPrice; // Set harga awal
         document.getElementById('editPaymentMethod').value = sale.paymentMethod;
         document.getElementById('editStatus').value = sale.status;
         document.getElementById('editPaymentStatus').value = sale.paymentStatus || 'Lunas';
         document.getElementById('editDescription').value = sale.description || '';
 
-        // Panggil updatePrice saat modal dibuka untuk memastikan harga sesuai
+        // Update harga saat modal dibuka
         updatePrice(true);
 
         document.getElementById('editModal').classList.remove('hidden');
