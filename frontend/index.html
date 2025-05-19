@@ -147,17 +147,29 @@
       <table class="min-w-[700px] w-full bg-white shadow-md rounded-lg">
         <thead>
           <tr class="bg-gray-200 text-left">
-            <th class="p-3">Tanggal</th>
+            <th class="p-3 cursor-pointer" data-column="date" data-sort="asc">
+                  Tanggal
+                  <span class="sort-indicator ml-1">⬍</span>
+                </th>
             <th class="p-3">ID Transaksi</th>
             <th class="p-3">Produk</th>
             <th class="p-3">Cabang</th>
-            <th class="p-3">Jumlah</th>
+            <th class="p-3 cursor-pointer" data-column="quantity" data-sort="asc">
+              Jumlah
+              <span class="sort-indicator ml-1">⬍</span>
+            </th>
             <th class="p-3">Harga Satuan</th>
             <th class="p-3">Total</th>
-            <th class="p-3">Metode Pembayaran</th>
+            <th class="p-3 cursor-pointer" data-column="paymentMethod" data-sort="asc">
+                  Metode Pembayaran
+                  <span class="sort-indicator ml-1">⬍</span>
+                </th>
             <th class="p-3">Status</th>
             <th class="p-3">Tipe Penjualan</th>
-            <th class="p-3">Status Pembayaran</th>
+            <th class="p-3 cursor-pointer" data-column="paymentStatus" data-sort="asc">
+                  Status Pembayaran
+                  <span class="sort-indicator ml-1">⬍</span>
+                </th>
             <th class="p-3">Aksi</th>
           </tr>
         </thead>
