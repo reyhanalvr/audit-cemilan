@@ -655,22 +655,31 @@
       }
     }
 
-    // Fungsi untuk konversi data ke CSV
+    // Fungsi untuk konversi data ke CSV dengan format baris terpisah
     function convertToCSV(data) {
-      const headers = ['Tanggal', 'ID Transaksi', 'Produk', 'Cabang', 'Jumlah', 'Harga Satuan (Rp)', 'Total (Rp)', 'Metode Pembayaran', 'Status', 'Tipe Penjualan', 'Status Pembayaran'];
-      const rows = data.map(item => [
-        item.date,
-        item.id,
-        item.product,
-        item.branch,
-        item.quantity,
-        formatRupiah(item.unitPrice),
-        formatRupiah(item.total),
-        item.paymentMethod,
-        item.status,
-        item.saleType || 'Tidak Diketahui',
-        item.paymentStatus || 'Tidak Diketahui'
-      ]);
+      const rows = [];
+
+      // Tambahkan setiap transaksi sebagai beberapa baris
+      data.forEach((item, index) => {
+        if (index > 0) {
+          rows.push(''); // Tambahkan baris kosong sebagai pemisah antar transaksi
+        }
+        rows.push(`Transaksi ${index + 1}`);
+        rows.push(`Tanggal: ${item.date}`);
+        rows.push(`ID Transaksi: ${item.id}`);
+        rows.push(`Produk: ${item.product}`);
+        rows.push(`Cabang: ${item.branch}`);
+        rows.push(`Jumlah: ${item.quantity}`);
+        rows.push(`Harga Satuan: ${formatRupiah(item.unitPrice)}`);
+        rows.push(`Total: ${formatRupiah(item.total)}`);
+        rows.push(`Metode Pembayaran: ${item.paymentMethod}`);
+        rows.push(`Status: ${item.status}`);
+        rows.push(`Tipe Penjualan: ${item.saleType || 'Tidak Diketahui'}`);
+        rows.push(`Status Pembayaran: ${item.paymentStatus || 'Tidak Diketahui'}`);
+        if (item.description) {
+          rows.push(`Deskripsi: ${item.description}`);
+        }
+      });
 
       // Tambahkan ringkasan total
       const totalATM = data.filter(item => item.paymentMethod === 'Transfer Bank').reduce((sum, item) => sum + (item.total || 0), 0);
@@ -678,21 +687,16 @@
       const unpaidATM = data.filter(item => item.paymentMethod === 'Transfer Bank' && item.paymentStatus === 'Belum Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
       const unpaidCash = data.filter(item => item.paymentMethod === 'Cash' && item.paymentStatus === 'Belum Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
 
-      const summaryRow = [
-        '', '', '', '', '', '', '', '', '', '', '',
-        `Total Uang di ATM: ${formatRupiah(totalATM)}`,
-        `Total Uang di Cash: ${formatRupiah(totalCash)}`,
-        `Total Belum Lunas di ATM: ${formatRupiah(unpaidATM)}`,
-        `Total Belum Lunas di Cash: ${formatRupiah(unpaidCash)}`
-      ];
+      // Tambahkan baris kosong sebelum ringkasan
+      rows.push('');
+      rows.push('Ringkasan');
+      rows.push(`Total Uang di ATM: ${formatRupiah(totalATM)}`);
+      rows.push(`Total Uang di Cash: ${formatRupiah(totalCash)}`);
+      rows.push(`Total Belum Lunas di ATM: ${formatRupiah(unpaidATM)}`);
+      rows.push(`Total Belum Lunas di Cash: ${formatRupiah(unpaidCash)}`);
 
-      rows.push(summaryRow);
-
-      // Gabungkan header dan rows
-      return [
-        headers.join(','),
-        ...rows.map(row => row.join(','))
-      ].join('\n');
+      // Gabungkan semua baris
+      return rows.join('\n');
     }
 
     // Fungsi untuk ekspor ke CSV
