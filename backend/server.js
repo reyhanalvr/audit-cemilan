@@ -2,7 +2,7 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 
 const cors = require('cors');
 const express = require('express');
-const { Pool } = require('pg'); // Pakai pg untuk PostgreSQL
+const { Pool } = require('pg');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -13,7 +13,7 @@ app.use(express.json());
 
 // Konfigurasi CORS
 const corsOptions = {
-  origin: 'https://audit-sijablay.vercel.app', // Domain frontend Anda
+  origin: 'https://audit-sijablay.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
@@ -27,7 +27,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Kata sandi untuk autentikasi (disimpan di .env untuk keamanan)
+// Kata sandi untuk autentikasi
 const PASSWORD = process.env.AUTH_PASSWORD;
 
 pool.connect((err) => {
@@ -105,10 +105,15 @@ pool.connect((err) => {
 
 // Fungsi untuk generate ID
 async function generateId(prefix, table) {
-  const result = await pool.query(`SELECT id FROM ${table} ORDER BY id DESC LIMIT 1`);
-  const lastId = result.rows[0]?.id || `${prefix}000`;
-  const num = parseInt(lastId.replace(prefix, '')) + 1;
-  return `${prefix}${num.toString().padStart(3, '0')}`;
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`SELECT id FROM ${table} ORDER BY id DESC LIMIT 1 FOR UPDATE`);
+    const lastId = result.rows[0]?.id || `${prefix}000`;
+    const num = parseInt(lastId.replace(prefix, '')) + 1;
+    return `${prefix}${num.toString().padStart(3, '0')}`;
+  } finally {
+    client.release();
+  }
 }
 
 // Fungsi untuk mencari stok berdasarkan product dan branch
@@ -118,23 +123,29 @@ async function findStock(product, branch) {
 }
 
 // Fungsi untuk mengupdate atau menambah stok
-async function updateOrAddStock(product, branch, quantity) {
+async function updateOrAddStock(product, branch, quantity, client) {
   const stock = await findStock(product, branch);
   if (stock) {
     // Update stok yang sudah ada
-    await pool.query('UPDATE stock SET "quantity" = "quantity" + $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, branch]);
+    const newQuantity = stock.quantity + quantity;
+    if (newQuantity < 0) {
+      throw new Error(`Stok untuk ${product} di ${branch} tidak boleh negatif. Stok saat ini: ${stock.quantity}.`);
+    }
+    await client.query('UPDATE stock SET "quantity" = $1 WHERE "product" = $2 AND "branch" = $3', [newQuantity, product, branch]);
     return stock.id;
   } else {
     // Tambah stok baru
+    if (quantity < 0) {
+      throw new Error(`Jumlah stok awal untuk ${product} di ${branch} tidak boleh negatif.`);
+    }
     const stockId = await generateId('STK', 'stock');
-    await pool.query('INSERT INTO stock (id, "product", "branch", "quantity") VALUES ($1, $2, $3, $4)', [stockId, product, branch, quantity]);
+    await client.query('INSERT INTO stock (id, "product", "branch", "quantity") VALUES ($1, $2, $3, $4)', [stockId, product, branch, quantity]);
     return stockId;
   }
 }
 
 // Fungsi untuk mencatat riwayat stok
-async function logStockHistory(action, product, quantity, branch, toBranch = null) {
-  const historyId = await generateId('HIST', 'stock_history');
+async function logStockHistory(action, product, quantity, branch, toBranch = null, client) {
   // Cek duplikat dalam 5 detik terakhir
   const checkQuery = `
     SELECT COUNT(*) as count 
@@ -142,15 +153,18 @@ async function logStockHistory(action, product, quantity, branch, toBranch = nul
     WHERE "action" = $1 AND "product" = $2 AND "quantity" = $3 AND "branch" = $4 
     AND "toBranch" = $5 AND "timestamp" > NOW() - INTERVAL '5 seconds'
   `;
-  const checkResult = await pool.query(checkQuery, [action, product, quantity, branch, toBranch]);
+  const checkResult = await client.query(checkQuery, [action, product, quantity, branch, toBranch]);
   if (checkResult.rows[0].count > 0) {
     console.log(`Duplikat ditemukan untuk ${product}, ${action}, ${quantity} di ${branch}. Abaikan.`);
-    return; // Abaikan jika duplikat ditemukan
+    return;
   }
-  await pool.query(
+
+  const historyId = await generateId('HIST', 'stock_history');
+  await client.query(
     'INSERT INTO stock_history (id, "action", "product", "quantity", "branch", "toBranch") VALUES ($1, $2, $3, $4, $5, $6)',
     [historyId, action, product, quantity, branch, toBranch]
   );
+  console.log(`Riwayat stok ditambahkan: ${action} ${quantity} ${product} di ${branch}${toBranch ? ` ke ${toBranch}` : ''}`);
 }
 
 // Endpoint: Autentikasi
@@ -185,32 +199,40 @@ app.post('/api/sales', async (req, res) => {
   console.log('Data yang diterima dari frontend:', req.body);
   const { date, product, quantity, unitPrice, paymentMethod, status, saleType, paymentStatus, description, branch } = req.body;
   if (!branch || !['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(branch)) {
-    res.status(400).json({ error: 'Cabang tidak valid.' });
-    return;
-  }
-  const total = quantity * unitPrice;
-  const id = await generateId('TRX', 'sales');
-
-  const stockResult = await pool.query('SELECT * FROM stock WHERE "product" = $1 AND "branch" = $2', [product, branch]);
-  const stock = stockResult.rows[0];
-  if (!stock || stock.quantity < quantity) {
-    res.status(400).json({ error: `Stok tidak mencukupi untuk ${product} di cabang ${branch}. Stok tersedia: ${stock ? stock.quantity : 0} unit.` });
-    return;
+    return res.status(400).json({ error: 'Cabang tidak valid.' });
   }
 
-  const sql = `
-    INSERT INTO sales (id, "date", "product", "quantity", "unitPrice", "total", "paymentMethod", "status", "saleType", "paymentStatus", "description", "branch")
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-  `;
-  const params = [id, date, product, quantity, unitPrice, total, paymentMethod, status, saleType, paymentStatus, description || '', branch];
+  const client = await pool.connect();
   try {
-    await pool.query(sql, params);
-    await pool.query('UPDATE stock SET "quantity" = "quantity" - $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, branch]);
+    await client.query('BEGIN');
+
+    const stockResult = await client.query('SELECT * FROM stock WHERE "product" = $1 AND "branch" = $2 FOR UPDATE', [product, branch]);
+    const stock = stockResult.rows[0];
+    if (!stock || stock.quantity < quantity) {
+      throw new Error(`Stok tidak mencukupi untuk ${product} di cabang ${branch}. Stok tersedia: ${stock ? stock.quantity : 0} unit.`);
+    }
+
+    const total = quantity * unitPrice;
+    const id = await generateId('TRX', 'sales');
+
+    const sql = `
+      INSERT INTO sales (id, "date", "product", "quantity", "unitPrice", "total", "paymentMethod", "status", "saleType", "paymentStatus", "description", "branch")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `;
+    const params = [id, date, product, quantity, unitPrice, total, paymentMethod, status, saleType, paymentStatus, description || '', branch];
+    await client.query(sql, params);
+
+    await client.query('UPDATE stock SET "quantity" = "quantity" - $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, branch]);
+
+    await client.query('COMMIT');
     console.log('Transaksi penjualan ditambahkan:', { id });
     res.status(201).json({ id });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error saat menyimpan transaksi:', err.message);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -218,75 +240,83 @@ app.post('/api/sales', async (req, res) => {
 app.put('/api/sales/:id', async (req, res) => {
   const { date, product, quantity, unitPrice, paymentMethod, status, saleType, paymentStatus, description, branch } = req.body;
   if (!branch || !['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(branch)) {
-    res.status(400).json({ error: 'Cabang tidak valid.' });
-    return;
-  }
-  const total = quantity * unitPrice;
-
-  const oldSaleResult = await pool.query('SELECT * FROM sales WHERE id = $1', [req.params.id]);
-  const oldSale = oldSaleResult.rows[0];
-  if (!oldSale) {
-    res.status(404).json({ error: 'Transaksi tidak ditemukan.' });
-    return;
+    return res.status(400).json({ error: 'Cabang tidak valid.' });
   }
 
-  const quantityDifference = quantity - oldSale.quantity;
-
-  if (quantityDifference > 0) {
-    const stockResult = await pool.query('SELECT * FROM stock WHERE "product" = $1 AND "branch" = $2', [product, branch]);
-    const stock = stockResult.rows[0];
-    if (!stock || stock.quantity < quantityDifference) {
-      res.status(400).json({ error: `Stok tidak mencukupi untuk ${product} di cabang ${branch}. Stok tersedia: ${stock ? stock.quantity : 0} unit.` });
-      return;
-    }
-  }
-
-  const sql = `
-    UPDATE sales
-    SET "date" = $1, "product" = $2, "quantity" = $3, "unitPrice" = $4, "total" = $5, "paymentMethod" = $6, "status" = $7, "saleType" = $8, "paymentStatus" = $9, "description" = $10, "branch" = $11
-    WHERE id = $12
-  `;
-  const params = [date, product, quantity, unitPrice, total, paymentMethod, status, saleType || 'onhand', paymentStatus, description || '', branch, req.params.id];
+  const client = await pool.connect();
   try {
-    const result = await pool.query(sql, params);
-    if (result.rowCount === 0) {
-      console.log('Transaksi tidak ditemukan:', req.params.id);
-      res.status(404).json({ error: 'Transaksi tidak ditemukan.' });
-      return;
+    await client.query('BEGIN');
+
+    const oldSaleResult = await client.query('SELECT * FROM sales WHERE id = $1 FOR UPDATE', [req.params.id]);
+    const oldSale = oldSaleResult.rows[0];
+    if (!oldSale) {
+      throw new Error('Transaksi tidak ditemukan.');
     }
 
-    await pool.query('UPDATE stock SET "quantity" = "quantity" - $1 WHERE "product" = $2 AND "branch" = $3', [quantityDifference, product, branch]);
+    const quantityDifference = quantity - oldSale.quantity;
+
+    if (quantityDifference > 0) {
+      const stockResult = await client.query('SELECT * FROM stock WHERE "product" = $1 AND "branch" = $2 FOR UPDATE', [product, branch]);
+      const stock = stockResult.rows[0];
+      if (!stock || stock.quantity < quantityDifference) {
+        throw new Error(`Stok tidak mencukupi untuk ${product} di cabang ${branch}. Stok tersedia: ${stock ? stock.quantity : 0} unit.`);
+      }
+    }
+
+    const total = quantity * unitPrice;
+    const sql = `
+      UPDATE sales
+      SET "date" = $1, "product" = $2, "quantity" = $3, "unitPrice" = $4, "total" = $5, "paymentMethod" = $6, "status" = $7, "saleType" = $8, "paymentStatus" = $9, "description" = $10, "branch" = $11
+      WHERE id = $12
+    `;
+    const params = [date, product, quantity, unitPrice, total, paymentMethod, status, saleType || 'onhand', paymentStatus, description || '', branch, req.params.id];
+    const result = await client.query(sql, params);
+    if (result.rowCount === 0) {
+      throw new Error('Transaksi tidak ditemukan.');
+    }
+
+    await client.query('UPDATE stock SET "quantity" = "quantity" - $1 WHERE "product" = $2 AND "branch" = $3', [quantityDifference, product, branch]);
+
+    await client.query('COMMIT');
     console.log('Transaksi penjualan diperbarui:', { id: req.params.id });
     res.status(200).json({ message: 'Transaksi diperbarui.' });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error saat mengedit transaksi:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(err.message.includes('tidak ditemukan') ? 404 : 500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
 // Endpoint: Menghapus transaksi penjualan
 app.delete('/api/sales/:id', async (req, res) => {
-  const saleResult = await pool.query('SELECT * FROM sales WHERE id = $1', [req.params.id]);
-  const sale = saleResult.rows[0];
-  if (!sale) {
-    res.status(404).json({ error: 'Transaksi tidak ditemukan.' });
-    return;
-  }
-
+  const client = await pool.connect();
   try {
-    const result = await pool.query('DELETE FROM sales WHERE id = $1', [req.params.id]);
-    if (result.rowCount === 0) {
-      console.log('Transaksi tidak ditemukan:', req.params.id);
-      res.status(404).json({ error: 'Transaksi tidak ditemukan.' });
-      return;
+    await client.query('BEGIN');
+
+    const saleResult = await client.query('SELECT * FROM sales WHERE id = $1 FOR UPDATE', [req.params.id]);
+    const sale = saleResult.rows[0];
+    if (!sale) {
+      throw new Error('Transaksi tidak ditemukan.');
     }
 
-    await pool.query('UPDATE stock SET "quantity" = "quantity" + $1 WHERE "product" = $2 AND "branch" = $3', [sale.quantity, sale.product, sale.branch]);
+    const result = await client.query('DELETE FROM sales WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) {
+      throw new Error('Transaksi tidak ditemukan.');
+    }
+
+    await client.query('UPDATE stock SET "quantity" = "quantity" + $1 WHERE "product" = $2 AND "branch" = $3', [sale.quantity, sale.product, sale.branch]);
+
+    await client.query('COMMIT');
     console.log('Transaksi penjualan dihapus:', { id: req.params.id });
     res.status(204).send();
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error saat menghapus transaksi:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(err.message.includes('tidak ditemukan') ? 404 : 500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -306,22 +336,27 @@ app.get('/api/stock', async (req, res) => {
 app.post('/api/stock', async (req, res) => {
   const { product, quantity, branch } = req.body;
   if (!branch || !['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(branch)) {
-    res.status(400).json({ error: 'Cabang tidak valid.' });
-    return;
+    return res.status(400).json({ error: 'Cabang tidak valid.' });
   }
-  if (quantity < 0) {
-    res.status(400).json({ error: 'Jumlah stok tidak boleh negatif.' });
-    return;
+  if (quantity <= 0) {
+    return res.status(400).json({ error: 'Jumlah stok harus lebih dari 0.' });
   }
 
+  const client = await pool.connect();
   try {
-    const stockId = await updateOrAddStock(product, branch, quantity);
-    // Catat riwayat
-    await logStockHistory('ADD', product, quantity, branch);
+    await client.query('BEGIN');
+
+    const stockId = await updateOrAddStock(product, branch, quantity, client);
+    await logStockHistory('ADD', product, quantity, branch, null, client);
+
+    await client.query('COMMIT');
     res.status(201).json({ id: stockId });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error saat menambah/memperbarui stok:', err.message);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -329,57 +364,74 @@ app.post('/api/stock', async (req, res) => {
 app.put('/api/stock/:id', async (req, res) => {
   const { id } = req.params;
   const { product, quantity, branch } = req.body;
+  if (!branch || !['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(branch)) {
+    return res.status(400).json({ error: 'Cabang tidak valid.' });
+  }
+  if (quantity < 0) {
+    return res.status(400).json({ error: 'Jumlah stok tidak boleh negatif.' });
+  }
 
+  const client = await pool.connect();
   try {
-    // Ambil stok sebelumnya
-    const stockBeforeResult = await pool.query('SELECT * FROM stock WHERE id = $1', [id]);
+    await client.query('BEGIN');
+
+    const stockBeforeResult = await client.query('SELECT * FROM stock WHERE id = $1 FOR UPDATE', [id]);
     const stockBefore = stockBeforeResult.rows[0];
     if (!stockBefore) {
-      return res.status(404).json({ error: 'Stok tidak ditemukan' });
+      throw new Error('Stok tidak ditemukan');
     }
 
-    // Hitung perubahan
     const change = quantity - stockBefore.quantity;
 
-    // Update stok
-    const result = await pool.query(
+    const result = await client.query(
       'UPDATE stock SET product = $1, quantity = $2, branch = $3 WHERE id = $4 RETURNING *',
       [product, quantity, branch, id]
     );
     const updatedStock = result.rows[0];
 
-    // Catat riwayat dengan perubahan bersih
-    await logStockHistory('EDIT', product, change, branch);
+    if (change !== 0) {
+      await logStockHistory('EDIT', product, change, branch, null, client);
+    }
 
+    await client.query('COMMIT');
     res.status(200).json(updatedStock);
-  } catch (error) {
-    console.error('Error saat mengedit stok:', error);
-    res.status(500).json({ error: 'Gagal mengedit stok' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error saat mengedit stok:', err.message);
+    res.status(err.message.includes('tidak ditemukan') ? 404 : 500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
 // Endpoint: Menghapus stok
 app.delete('/api/stock/:id', async (req, res) => {
+  const client = await pool.connect();
   try {
-    const stockResult = await pool.query('SELECT * FROM stock WHERE id = $1', [req.params.id]);
+    await client.query('BEGIN');
+
+    const stockResult = await client.query('SELECT * FROM stock WHERE id = $1 FOR UPDATE', [req.params.id]);
     const stock = stockResult.rows[0];
     if (!stock) {
-      res.status(404).json({ error: 'Stok tidak ditemukan.' });
-      return;
+      throw new Error('Stok tidak ditemukan.');
     }
 
-    const result = await pool.query('DELETE FROM stock WHERE id = $1', [req.params.id]);
+    const result = await client.query('DELETE FROM stock WHERE id = $1', [req.params.id]);
     if (result.rowCount === 0) {
-      res.status(404).json({ error: 'Stok tidak ditemukan.' });
-      return;
+      throw new Error('Stok tidak ditemukan.');
     }
-    // Catat riwayat
-    await logStockHistory('DELETE', stock.product, stock.quantity, stock.branch);
+
+    await logStockHistory('DELETE', stock.product, stock.quantity, stock.branch, null, client);
+
+    await client.query('COMMIT');
     console.log('Stok dihapus:', { id: req.params.id });
     res.status(204).send();
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error saat menghapus stok:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(err.message.includes('tidak ditemukan') ? 404 : 500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -388,42 +440,44 @@ app.post('/api/stock/transfer', async (req, res) => {
   const { product, quantity, fromBranch, toBranch } = req.body;
 
   if (!fromBranch || !['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(fromBranch)) {
-    res.status(400).json({ error: 'Cabang asal tidak valid.' });
-    return;
+    return res.status(400).json({ error: 'Cabang asal tidak valid.' });
   }
   if (!toBranch || !['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(toBranch)) {
-    res.status(400).json({ error: 'Cabang tujuan tidak valid.' });
-    return;
+    return res.status(400).json({ error: 'Cabang tujuan tidak valid.' });
   }
   if (fromBranch === toBranch) {
-    res.status(400).json({ error: 'Cabang asal dan tujuan tidak boleh sama.' });
-    return;
+    return res.status(400).json({ error: 'Cabang asal dan tujuan tidak boleh sama.' });
   }
   if (quantity <= 0) {
-    res.status(400).json({ error: 'Jumlah yang dipindahkan harus lebih dari 0.' });
-    return;
+    return res.status(400).json({ error: 'Jumlah yang dipindahkan harus lebih dari 0.' });
   }
 
-  const fromStock = await findStock(product, fromBranch);
-  if (!fromStock) {
-    res.status(404).json({ error: `Stok untuk ${product} di ${fromBranch} tidak ditemukan.` });
-    return;
-  }
-  if (fromStock.quantity < quantity) {
-    res.status(400).json({ error: `Stok tidak mencukupi di ${fromBranch}. Stok tersedia: ${fromStock.quantity} unit.` });
-    return;
-  }
-
+  const client = await pool.connect();
   try {
-    await pool.query('UPDATE stock SET "quantity" = "quantity" - $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, fromBranch]);
-    await updateOrAddStock(product, toBranch, quantity);
-    // Catat riwayat
-    await logStockHistory('TRANSFER', product, quantity, fromBranch, toBranch);
+    await client.query('BEGIN');
+
+    const fromStockResult = await client.query('SELECT * FROM stock WHERE "product" = $1 AND "branch" = $2 FOR UPDATE', [product, fromBranch]);
+    const fromStock = fromStockResult.rows[0];
+    if (!fromStock) {
+      throw new Error(`Stok untuk ${product} di ${fromBranch} tidak ditemukan.`);
+    }
+    if (fromStock.quantity < quantity) {
+      throw new Error(`Stok tidak mencukupi di ${fromBranch}. Stok tersedia: ${fromStock.quantity} unit.`);
+    }
+
+    await client.query('UPDATE stock SET "quantity" = "quantity" - $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, fromBranch]);
+    await updateOrAddStock(product, toBranch, quantity, client);
+    await logStockHistory('TRANSFER', product, quantity, fromBranch, toBranch, client);
+
+    await client.query('COMMIT');
     console.log(`Stok dipindahkan: ${quantity} unit ${product} dari ${fromBranch} ke ${toBranch}`);
     res.status(200).json({ message: 'Stok berhasil dipindahkan.' });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error saat memindahkan stok:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(err.message.includes('tidak ditemukan') ? 404 : 400).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -439,37 +493,26 @@ app.get('/api/stock/history', async (req, res) => {
   }
 });
 
-// Endpoint: Menambah riwayat stok (opsional, untuk fleksibilitas)
-app.post('/api/stock/history', async (req, res) => {
-  const { action, product, quantity, branch, toBranch } = req.body;
-  if (!['ADD', 'DELETE', 'EDIT', 'TRANSFER'].includes(action)) {
-    res.status(400).json({ error: 'Aksi tidak valid.' });
-    return;
-  }
-  if (!branch || !['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].includes(branch)) {
-    res.status(400).json({ error: 'Cabang tidak valid.' });
-    return;
-  }
-  if (quantity < 0) {
-    res.status(400).json({ error: 'Jumlah tidak boleh negatif.' });
-    return;
-  }
-  if (action === 'TRANSFER' && !toBranch) {
-    res.status(400).json({ error: 'Cabang tujuan diperlukan untuk TRANSFER.' });
-    return;
-  }
-
+// Endpoint: Menghapus entri riwayat stok
+app.delete('/api/stock/history/:id', async (req, res) => {
+  const client = await pool.connect();
   try {
-    const historyId = await generateId('HIST', 'stock_history');
-    await pool.query(
-      'INSERT INTO stock_history (id, "action", "product", "quantity", "branch", "toBranch") VALUES ($1, $2, $3, $4, $5, $6)',
-      [historyId, action, product, quantity, branch, toBranch]
-    );
-    console.log('Riwayat stok ditambahkan:', { id: historyId });
-    res.status(201).json({ id: historyId });
+    await client.query('BEGIN');
+
+    const result = await client.query('DELETE FROM stock_history WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) {
+      throw new Error('Entri riwayat stok tidak ditemukan.');
+    }
+
+    await client.query('COMMIT');
+    console.log('Entri riwayat stok dihapus:', { id: req.params.id });
+    res.status(204).send();
   } catch (err) {
-    console.error('Error saat mencatat riwayat stok:', err.message);
-    res.status(500).json({ error: err.message });
+    await client.query('ROLLBACK');
+    console.error('Error saat menghapus riwayat stok:', err.message);
+    res.status(err.message.includes('tidak ditemukan') ? 404 : 500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -494,32 +537,37 @@ app.get('/api/productions', async (req, res) => {
 app.post('/api/productions', async (req, res) => {
   const { date, products, description, distributed } = req.body;
   if (!Array.isArray(products)) {
-    res.status(400).json({ error: 'Data produk tidak valid.' });
-    return;
+    return res.status(400).json({ error: 'Data produk tidak valid.' });
   }
   const nonZeroProducts = products.filter(p => p.quantity > 0);
   if (nonZeroProducts.length === 0) {
-    res.status(400).json({ error: 'Harap masukkan setidaknya satu produk dengan jumlah lebih dari 0.' });
-    return;
+    return res.status(400).json({ error: 'Harap masukkan setidaknya satu produk dengan jumlah lebih dari 0.' });
   }
   if (products.some(p => p.quantity < 0)) {
-    res.status(400).json({ error: 'Jumlah produksi tidak boleh negatif.' });
-    return;
+    return res.status(400).json({ error: 'Jumlah produksi tidak boleh negatif.' });
   }
 
-  const id = await generateId('PRD', 'productions');
-  const sql = `
-    INSERT INTO productions (id, "date", "products", "description", "distributed")
-    VALUES ($1, $2, $3, $4, $5)
-  `;
-  const params = [id, date, JSON.stringify(products), description || '', JSON.stringify(distributed || {})];
+  const client = await pool.connect();
   try {
-    await pool.query(sql, params);
+    await client.query('BEGIN');
+
+    const id = await generateId('PRD', 'productions');
+    const sql = `
+      INSERT INTO productions (id, "date", "products", "description", "distributed")
+      VALUES ($1, $2, $3, $4, $5)
+    `;
+    const params = [id, date, JSON.stringify(products), description || '', JSON.stringify(distributed || {})];
+    await client.query(sql, params);
+
+    await client.query('COMMIT');
     console.log('Catatan produksi ditambahkan:', { id });
     res.status(201).json({ id });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error saat menambah catatan produksi:', err.message);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -528,16 +576,13 @@ app.put('/api/productions/:id', async (req, res) => {
   console.log(`[${new Date().toISOString()}] Distribusi dimulai untuk production ID: ${req.params.id}, Data:`, req.body);
   const { date, products, description, distributed } = req.body;
   if (!Array.isArray(products) || !distributed || typeof distributed !== 'object') {
-    res.status(400).json({ error: 'Data produksi atau distribusi tidak valid.' });
-    return;
+    return res.status(400).json({ error: 'Data produksi atau distribusi tidak valid.' });
   }
 
-  // Mulai transaksi untuk mencegah race condition
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
-    // Lock baris production untuk mencegah akses bersamaan
+
     const productionResult = await client.query(
       'SELECT * FROM productions WHERE id = $1 FOR UPDATE',
       [req.params.id]
@@ -547,7 +592,6 @@ app.put('/api/productions/:id', async (req, res) => {
       throw new Error('Catatan produksi tidak ditemukan.');
     }
 
-    // Cek apakah sudah didistribusikan
     const existingDistributed = JSON.parse(production.distributed || '{}');
     if (Object.keys(existingDistributed).length > 0) {
       throw new Error('Catatan produksi ini sudah didistribusikan.');
@@ -571,9 +615,8 @@ app.put('/api/productions/:id', async (req, res) => {
           throw new Error(`Jumlah untuk ${branch} tidak boleh negatif.`);
         }
         if (qty > 0) {
-          await updateOrAddStock(productName, branch, qty);
-          // Catat riwayat distribusi
-          await logStockHistory('ADD', productName, qty, branch);
+          await updateOrAddStock(productName, branch, qty, client);
+          await logStockHistory('ADD', productName, qty, branch, null, client);
         }
       }
     }
@@ -592,10 +635,10 @@ app.put('/api/productions/:id', async (req, res) => {
     await client.query('COMMIT');
     console.log(`[${new Date().toISOString()}] Catatan produksi diperbarui:`, { id: req.params.id });
     res.status(200).send();
-  } catch (error) {
+  } catch (err) {
     await client.query('ROLLBACK');
-    console.error(`[${new Date().toISOString()}] Error saat mendistribusikan:`, error.message);
-    res.status(400).json({ error: error.message });
+    console.error(`[${new Date().toISOString()}] Error saat mendistribusikan:`, err.message);
+    res.status(err.message.includes('tidak ditemukan') ? 404 : 400).json({ error: err.message });
   } finally {
     client.release();
   }
@@ -603,30 +646,35 @@ app.put('/api/productions/:id', async (req, res) => {
 
 // Endpoint: Menghapus catatan produksi
 app.delete('/api/productions/:id', async (req, res) => {
-  const productionResult = await pool.query('SELECT * FROM productions WHERE id = $1', [req.params.id]);
-  const production = productionResult.rows[0];
-  if (!production) {
-    res.status(404).json({ error: 'Catatan produksi tidak ditemukan.' });
-    return;
-  }
-
-  const distributed = JSON.parse(production.distributed || '{}');
-  if (Object.keys(distributed).length > 0) {
-    res.status(400).json({ error: 'Catatan produksi yang sudah didistribusikan tidak dapat dihapus.' });
-    return;
-  }
-
+  const client = await pool.connect();
   try {
-    const result = await pool.query('DELETE FROM productions WHERE id = $1', [req.params.id]);
-    if (result.rowCount === 0) {
-      res.status(404).json({ error: 'Catatan produksi tidak ditemukan.' });
-      return;
+    await client.query('BEGIN');
+
+    const productionResult = await client.query('SELECT * FROM productions WHERE id = $1 FOR UPDATE', [req.params.id]);
+    const production = productionResult.rows[0];
+    if (!production) {
+      throw new Error('Catatan produksi tidak ditemukan.');
     }
+
+    const distributed = JSON.parse(production.distributed || '{}');
+    if (Object.keys(distributed).length > 0) {
+      throw new Error('Catatan produksi yang sudah didistribusikan tidak dapat dihapus.');
+    }
+
+    const result = await client.query('DELETE FROM productions WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) {
+      throw new Error('Catatan produksi tidak ditemukan.');
+    }
+
+    await client.query('COMMIT');
     console.log('Catatan produksi dihapus:', { id: req.params.id });
     res.status(204).send();
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error saat menghapus catatan produksi:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(err.message.includes('tidak ditemukan') ? 404 : 500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 

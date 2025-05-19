@@ -200,6 +200,7 @@
                 <th class="p-3">Jumlah</th>
                 <th class="p-3">Cabang Asal</th>
                 <th class="p-3">Cabang Tujuan</th>
+                <th class="p-3">Aksi</th>
               </tr>
             </thead>
             <tbody id="stockHistoryTable"></tbody>
@@ -274,28 +275,17 @@
   </div>
 
   <script>
-    // Fungsi untuk mencatat riwayat perubahan stok
-    async function logStockHistory(action, product, quantity, branch, toBranch = null) {
-      try {
-        const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock/history', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action,
-            product,
-            quantity,
-            branch,
-            toBranch,
-            timestamp: new Date().toISOString(),
-            user: 'System' // Ganti dengan user yang login jika ada autentikasi
-          })
-        });
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        console.log('Riwayat stok berhasil dicatat:', { action, product, quantity, branch, toBranch });
-      } catch (error) {
-        console.error('Error saat mencatat riwayat stok:', error);
-        alert('Gagal mencatat riwayat stok.');
-      }
+    // Fungsi debounce untuk mencegah pengiriman ganda
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
     }
 
     // Fungsi untuk mengambil riwayat stok dari backend
@@ -327,223 +317,13 @@
           <td class="p-3">${item.quantity}</td>
           <td class="p-3">${item.branch}</td>
           <td class="p-3">${item.toBranch || '-'}</td>
+          <td class="p-3">
+            <button class="deleteHistoryBtn bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" data-id="${item.id}">Hapus</button>
+          </td>
         `;
         historyTableBody.appendChild(row);
       });
     }
-
-    // Handle submit form tambah stok
-    document.getElementById('stockForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-
-      const addStockBtn = document.getElementById('addStockBtn');
-      if (addStockBtn.disabled) return; // Cegah pengiriman berulang
-      addStockBtn.disabled = true;
-
-      const product = document.getElementById('product').value;
-      const quantity = parseInt(document.getElementById('quantity').value);
-      const branch = document.getElementById('branch').value;
-
-      try {
-        const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product, quantity, branch })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
-        }
-
-        console.log('Stok berhasil ditambahkan:', await response.json());
-        // Catat riwayat
-        await logStockHistory('ADD', product, quantity, branch);
-        // Render ulang tabel stok dan riwayat
-        await renderStockTables();
-        await renderStockHistory();
-        this.reset();
-      } catch (error) {
-        console.error('Error saat menambah stok:', error);
-        alert(`Gagal menambah stok: ${error.message}`);
-      } finally {
-        addStockBtn.disabled = false; // Aktifkan kembali tombol
-      }
-    });
-
-    // Handle aksi edit, hapus, dan pindah stok
-    document.addEventListener('click', async function(e) {
-      if (e.target.classList.contains('editBtn')) {
-        const id = e.target.dataset.id;
-        const stocks = await fetchStocks();
-        const stock = stocks.find(item => item.id === id);
-
-        document.getElementById('editId').value = stock.id;
-        document.getElementById('editProduct').value = stock.product;
-        document.getElementById('editQuantity').value = stock.quantity;
-        document.getElementById('editBranch').value = stock.branch;
-
-        document.getElementById('editModal').classList.remove('hidden');
-      }
-
-      if (e.target.classList.contains('deleteBtn')) {
-        if (confirm('Yakin ingin menghapus stok ini?')) {
-          const deleteBtn = e.target;
-          if (deleteBtn.disabled) return; // Cegah klik berulang
-          deleteBtn.disabled = true;
-
-          const id = deleteBtn.dataset.id;
-          const stocks = await fetchStocks();
-          const stock = stocks.find(item => item.id === id);
-          
-          try {
-            const response = await fetch(`https://audit-sijablay-be.vercel.app/api/stock/${id}`, {
-              method: 'DELETE'
-            });
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-
-            console.log('Stok berhasil dihapus:', id);
-            // Catat riwayat
-            await logStockHistory('DELETE', stock.product, stock.quantity, stock.branch);
-            // Render ulang tabel stok dan riwayat
-            await renderStockTables();
-            await renderStockHistory();
-          } catch (error) {
-            console.error('Error saat menghapus stok:', error);
-            alert('Gagal menghapus stok.');
-          } finally {
-            deleteBtn.disabled = false; // Aktifkan kembali tombol
-          }
-        }
-      }
-
-      if (e.target.classList.contains('transferBtn')) {
-        const id = e.target.dataset.id;
-        const stocks = await fetchStocks();
-        const stock = stocks.find(item => item.id === id);
-
-        document.getElementById('transferId').value = stock.id;
-        document.getElementById('transferProduct').value = stock.product;
-        document.getElementById('transferBranch').value = stock.branch;
-
-        const transferToBranch = document.getElementById('transferToBranch');
-        transferToBranch.innerHTML = '';
-        ['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].forEach(branch => {
-          if (branch !== stock.branch) {
-            const option = document.createElement('option');
-            option.value = branch;
-            option.textContent = branch;
-            transferToBranch.appendChild(option);
-          }
-        });
-
-        document.getElementById('transferModal').classList.remove('hidden');
-      }
-
-      if (e.target.id === 'cancelEdit') {
-        document.getElementById('editModal').classList.add('hidden');
-      }
-
-      if (e.target.id === 'cancelTransfer') {
-        document.getElementById('transferModal').classList.add('hidden');
-      }
-    });
-
-    document.getElementById('editForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-
-      const saveEditBtn = document.getElementById('saveEditBtn');
-      if (saveEditBtn.disabled) return; // Cegah pengiriman berulang
-      saveEditBtn.disabled = true;
-
-      const id = document.getElementById('editId').value;
-      const product = document.getElementById('editProduct').value;
-      const quantity = parseInt(document.getElementById('editQuantity').value);
-      const branch = document.getElementById('editBranch').value;
-
-      try {
-        const response = await fetch(`https://audit-sijablay-be.vercel.app/api/stock/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product, quantity, branch })
-        });
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-
-        console.log('Stok berhasil diedit:', id);
-        // Catat riwayat dengan perubahan bersih
-        const stocks = await fetchStocks();
-        const stockBefore = stocks.find(item => item.id === id); // Ambil stok sebelum edit
-        const change = quantity - stockBefore.quantity; // Hitung perubahan
-        await logStockHistory('EDIT', product, change, branch);
-        // Render ulang tabel stok dan riwayat
-        await renderStockTables();
-        await renderStockHistory();
-        document.getElementById('editModal').classList.add('hidden');
-      } catch (error) {
-        console.error('Error saat mengedit stok:', error);
-        alert('Gagal mengedit stok.');
-      } finally {
-        saveEditBtn.disabled = false; // Aktifkan kembali tombol
-      }
-    });
-
-    // Handle submit form pindah stok
-    document.getElementById('transferForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-
-      const transferStockBtn = document.getElementById('transferStockBtn');
-      if (transferStockBtn.disabled) return; // Cegah pengiriman berulang
-      transferStockBtn.disabled = true;
-
-      const id = document.getElementById('transferId').value;
-      const product = document.getElementById('transferProduct').value;
-      const fromBranch = document.getElementById('transferBranch').value;
-      const toBranch = document.getElementById('transferToBranch').value;
-      const quantity = parseInt(document.getElementById('transferQuantity').value);
-
-      try {
-        const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock/transfer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product, quantity, fromBranch, toBranch })
-        });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
-        }
-
-        console.log('Stok berhasil dipindahkan:', { product, fromBranch, toBranch, quantity });
-        // Catat riwayat
-        await logStockHistory('TRANSFER', product, quantity, fromBranch, toBranch);
-        // Render ulang tabel stok dan riwayat
-        await renderStockTables();
-        await renderStockHistory();
-        document.getElementById('transferModal').classList.add('hidden');
-      } catch (error) {
-        console.error('Error saat memindahkan stok:', error);
-        alert(`Gagal memindahkan stok: ${error.message}`);
-      } finally {
-        transferStockBtn.disabled = false; // Aktifkan kembali tombol
-      }
-    });
-
-    // Handle export ke CSV
-    document.getElementById('exportCsvBtn').addEventListener('click', async function() {
-      const stocks = await fetchStocks();
-      let csv = 'Produk,Cabang,Stok\n';
-      stocks.forEach(stock => {
-        csv += `"${stock.product}","${stock.branch}",${stock.quantity}\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'stok-barang.csv';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    });
 
     // Fungsi untuk mengambil data stok
     async function fetchStocks() {
@@ -691,10 +471,286 @@
       });
     }
 
+    // Handle submit form tambah stok
+    const handleAddStock = debounce(async function(e) {
+      e.preventDefault();
+
+      const addStockBtn = document.getElementById('addStockBtn');
+      if (addStockBtn.disabled) return;
+      addStockBtn.disabled = true;
+      addStockBtn.textContent = 'Memproses...';
+
+      const product = document.getElementById('product').value;
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const branch = document.getElementById('branch').value;
+
+      if (quantity <= 0) {
+        alert('Jumlah stok harus lebih dari 0.');
+        addStockBtn.disabled = false;
+        addStockBtn.textContent = 'Tambah Stok';
+        return;
+      }
+
+      try {
+        const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product, quantity, branch })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+        }
+
+        console.log('Stok berhasil ditambahkan:', await response.json());
+        await renderStockTables();
+        await renderStockHistory();
+        document.getElementById('stockForm').reset();
+      } catch (error) {
+        console.error('Error saat menambah stok:', error);
+        alert(`Gagal menambah stok: ${error.message}`);
+      } finally {
+        addStockBtn.disabled = false;
+        addStockBtn.textContent = 'Tambah Stok';
+      }
+    }, 500);
+
+    document.getElementById('stockForm').addEventListener('submit', handleAddStock);
+
+    // Handle aksi edit, hapus, dan pindah stok
+    document.addEventListener('click', async function(e) {
+      if (e.target.classList.contains('editBtn')) {
+        const id = e.target.dataset.id;
+        const stocks = await fetchStocks();
+        const stock = stocks.find(item => item.id === id);
+
+        document.getElementById('editId').value = stock.id;
+        document.getElementById('editProduct').value = stock.product;
+        document.getElementById('editQuantity').value = stock.quantity;
+        document.getElementById('editBranch').value = stock.branch;
+
+        document.getElementById('editModal').classList.remove('hidden');
+      }
+
+      if (e.target.classList.contains('deleteBtn')) {
+        if (confirm('Yakin ingin menghapus stok ini?')) {
+          const deleteBtn = e.target;
+          if (deleteBtn.disabled) return;
+          deleteBtn.disabled = true;
+          deleteBtn.textContent = 'Memproses...';
+
+          const id = deleteBtn.dataset.id;
+          const stocks = await fetchStocks();
+          const stock = stocks.find(item => item.id === id);
+
+          try {
+            const response = await fetch(`https://audit-sijablay-be.vercel.app/api/stock/${id}`, {
+              method: 'DELETE'
+            });
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+            console.log('Stok berhasil dihapus:', id);
+            await renderStockTables();
+            await renderStockHistory();
+          } catch (error) {
+            console.error('Error saat menghapus stok:', error);
+            alert('Gagal menghapus stok.');
+          } finally {
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = 'Hapus';
+          }
+        }
+      }
+
+      if (e.target.classList.contains('deleteHistoryBtn')) {
+        if (confirm('Yakin ingin menghapus entri riwayat stok ini?')) {
+          const deleteHistoryBtn = e.target;
+          if (deleteHistoryBtn.disabled) return;
+          deleteHistoryBtn.disabled = true;
+          deleteHistoryBtn.textContent = 'Memproses...';
+
+          const id = deleteHistoryBtn.dataset.id;
+
+          try {
+            const response = await fetch(`https://audit-sijablay-be.vercel.app/api/stock/history/${id}`, {
+              method: 'DELETE'
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+            }
+
+            console.log('Entri riwayat stok berhasil dihapus:', id);
+            await renderStockHistory();
+          } catch (error) {
+            console.error('Error saat menghapus riwayat stok:', error);
+            alert(`Gagal menghapus riwayat stok: ${error.message}`);
+          } finally {
+            deleteHistoryBtn.disabled = false;
+            deleteHistoryBtn.textContent = 'Hapus';
+          }
+        }
+      }
+
+      if (e.target.classList.contains('transferBtn')) {
+        const id = e.target.dataset.id;
+        const stocks = await fetchStocks();
+        const stock = stocks.find(item => item.id === id);
+
+        document.getElementById('transferId').value = stock.id;
+        document.getElementById('transferProduct').value = stock.product;
+        document.getElementById('transferBranch').value = stock.branch;
+
+        const transferToBranch = document.getElementById('transferToBranch');
+        transferToBranch.innerHTML = '';
+        ['Jablay 1 (Zhidan)', 'Jablay 2 (Reyhan)', 'Jablay 3 (Tangsel)'].forEach(branch => {
+          if (branch !== stock.branch) {
+            const option = document.createElement('option');
+            option.value = branch;
+            option.textContent = branch;
+            transferToBranch.appendChild(option);
+          }
+        });
+
+        document.getElementById('transferModal').classList.remove('hidden');
+      }
+
+      if (e.target.id === 'cancelEdit') {
+        document.getElementById('editModal').classList.add('hidden');
+      }
+
+      if (e.target.id === 'cancelTransfer') {
+        document.getElementById('transferModal').classList.add('hidden');
+      }
+    });
+
+    // Handle submit form edit stok
+    const handleEditStock = debounce(async function(e) {
+      e.preventDefault();
+
+      const saveEditBtn = document.getElementById('saveEditBtn');
+      if (saveEditBtn.disabled) return;
+      saveEditBtn.disabled = true;
+      saveEditBtn.textContent = 'Memproses...';
+
+      const id = document.getElementById('editId').value;
+      const product = document.getElementById('editProduct').value;
+      const quantity = parseInt(document.getElementById('editQuantity').value);
+      const branch = document.getElementById('editBranch').value;
+
+      if (quantity < 0) {
+        alert('Jumlah stok tidak boleh negatif.');
+        saveEditBtn.disabled = false;
+        saveEditBtn.textContent = 'Simpan';
+        return;
+      }
+
+      try {
+        const response = await fetch(`https://audit-sijablay-be.vercel.app/api/stock/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product, quantity, branch })
+        });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        console.log('Stok berhasil diedit:', id);
+        await renderStockTables();
+        await renderStockHistory();
+        document.getElementById('editModal').classList.add('hidden');
+      } catch (error) {
+        console.error('Error saat mengedit stok:', error);
+        alert('Gagal mengedit stok.');
+      } finally {
+        saveEditBtn.disabled = false;
+        saveEditBtn.textContent = 'Simpan';
+      }
+    }, 500);
+
+    document.getElementById('editForm').addEventListener('submit', handleEditStock);
+
+    // Handle submit form pindah stok
+    const handleTransferStock = debounce(async function(e) {
+      e.preventDefault();
+
+      const transferStockBtn = document.getElementById('transferStockBtn');
+      if (transferStockBtn.disabled) return;
+      transferStockBtn.disabled = true;
+      transferStockBtn.textContent = 'Memproses...';
+
+      const id = document.getElementById('transferId').value;
+      const product = document.getElementById('transferProduct').value;
+      const fromBranch = document.getElementById('transferBranch').value;
+      const toBranch = document.getElementById('transferToBranch').value;
+      const quantity = parseInt(document.getElementById('transferQuantity').value);
+
+      const stocks = await fetchStocks();
+      const stock = stocks.find(item => item.id === id);
+      if (quantity > stock.quantity) {
+        alert(`Jumlah yang dipindahkan (${quantity}) melebihi stok yang tersedia (${stock.quantity}).`);
+        transferStockBtn.disabled = false;
+        transferStockBtn.textContent = 'Pindah';
+        return;
+      }
+
+      try {
+        const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock/transfer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product, quantity, fromBranch, toBranch })
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+        }
+
+        console.log('Stok berhasil dipindahkan:', { product, fromBranch, toBranch, quantity });
+        await renderStockTables();
+        await renderStockHistory();
+        document.getElementById('transferModal').classList.add('hidden');
+      } catch (error) {
+        console.error('Error saat memindahkan stok:', error);
+        alert(`Gagal memindahkan stok: ${error.message}`);
+      } finally {
+        transferStockBtn.disabled = false;
+        transferStockBtn.textContent = 'Pindah';
+      }
+    }, 500);
+
+    document.getElementById('transferForm').addEventListener('submit', handleTransferStock);
+
+    // Handle export ke CSV
+    document.getElementById('exportCsvBtn').addEventListener('click', async function() {
+      const stocks = await fetchStocks();
+      const salesSummary = await fetchSalesSummary();
+      let csv = 'Produk,Cabang,Stok,Keluar\n';
+      stocks.forEach(stock => {
+        const sold = salesSummary[stock.branch]?.[stock.product] || 0;
+        csv += `"${stock.product}","${stock.branch}",${stock.quantity},${sold}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'stok-barang.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
     // Fungsi inisialisasi
     async function init() {
-      await renderStockTables();
-      await renderStockHistory();
+      try {
+        await renderStockTables();
+        await renderStockHistory();
+      } catch (error) {
+        console.error('Gagal menginisialisasi aplikasi:', error);
+        document.getElementById('totalStockSummary').innerHTML = 'Gagal memuat data stok. Silakan coba lagi nanti.';
+        document.getElementById('branchSalesSummary').innerHTML = '<li class="text-red-500">Gagal memuat data penjualan.</li>';
+        document.getElementById('stockHistoryTable').innerHTML = '<tr><td colspan="7" class="p-3 text-red-500">Gagal memuat riwayat stok.</td></tr>';
+      }
     }
     init();
   </script>
