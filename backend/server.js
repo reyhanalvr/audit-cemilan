@@ -111,24 +111,38 @@ async function generateId(prefix, table) {
   return `${prefix}${num.toString().padStart(3, '0')}`;
 }
 
-// Fungsi untuk mencari stok berdasarkan product dan branch
+// Fungsi untuk mencari stok berdasarkan produk dan cabang
 async function findStock(product, branch) {
-  const result = await pool.query('SELECT * FROM stock WHERE "product" = $1 AND "branch" = $2', [product, branch]);
+  const trimmedProduct = product.trim();
+  const trimmedBranch = branch.trim();
+  console.log(`[findStock] Searching for product=${trimmedProduct}, branch=${trimmedBranch}`);
+  const result = await pool.query(
+    'SELECT * FROM stock WHERE TRIM("product") = $1 AND TRIM("branch") = $2',
+    [trimmedProduct, trimmedBranch]
+  );
+  console.log(`[findStock] Result: ${JSON.stringify(result.rows)}`);
   return result.rows[0];
 }
 
-// Fungsi untuk memperbarui atau menambah stok
 async function updateOrAddStock(product, branch, quantity) {
-  console.log(`Updating/Adding stock: product=${product}, branch=${branch}, quantity=${quantity}`);
+  console.log(`[updateOrAddStock] Processing: product=${product}, branch=${branch}, quantity=${quantity}`);
   const stock = await findStock(product, branch);
   if (stock) {
-    console.log(`Stock found, updating: id=${stock.id}, current quantity=${stock.quantity}`);
-    await pool.query('UPDATE stock SET "quantity" = "quantity" + $1 WHERE "product" = $2 AND "branch" = $3', [quantity, product, branch]);
+    console.log(`[updateOrAddStock] Stock found: id=${stock.id}, current quantity=${stock.quantity}`);
+    const updateResult = await pool.query(
+      'UPDATE stock SET "quantity" = "quantity" + $1 WHERE "product" = $2 AND "branch" = $3 RETURNING *',
+      [quantity, product, branch]
+    );
+    console.log(`[updateOrAddStock] Update result: rows affected=${updateResult.rowCount}, updated stock=${JSON.stringify(updateResult.rows[0])}`);
+    if (updateResult.rowCount === 0) {
+      throw new Error(`Failed to update stock for product=${product}, branch=${branch}`);
+    }
     return stock.id;
   } else {
-    console.log('Stock not found, creating new entry');
+    console.log(`[updateOrAddStock] Stock not found, creating new entry`);
     const stockId = await generateId('STCK', 'stock');
     await pool.query('INSERT INTO stock (id, "product", "branch", "quantity") VALUES ($1, $2, $3, $4)', [stockId, product, branch, quantity]);
+    console.log(`[updateOrAddStock] New stock created: id=${stockId}`);
     return stockId;
   }
 }
@@ -316,10 +330,11 @@ app.post('/api/stock', async (req, res) => {
       return res.status(400).json({ error: 'Product, branch, dan quantity wajib diisi, quantity tidak boleh negatif' });
     }
 
-    // Gunakan fungsi updateOrAddStock untuk menangani penambahan stok
+    console.log(`[POST /api/stock] Adding stock: product=${product}, branch=${branch}, quantity=${quantity}`);
     const stockId = await updateOrAddStock(product, branch, quantity);
 
     // Catat riwayat
+    console.log(`[POST /api/stock] Logging stock history for stockId=${stockId}`);
     await logStockHistory('ADD', product, quantity, branch);
 
     // Ambil data stok yang diperbarui untuk respons
@@ -327,10 +342,11 @@ app.post('/api/stock', async (req, res) => {
       'SELECT * FROM stock WHERE id = $1',
       [stockId]
     );
+    console.log(`[POST /api/stock] Updated stock: ${JSON.stringify(updatedStock.rows[0])}`);
 
     res.status(201).json(updatedStock.rows[0]);
   } catch (error) {
-    console.error('Error saat menambah stok:', error);
+    console.error('[POST /api/stock] Error saat menambah stok:', error);
     res.status(500).json({ error: 'Gagal menambah stok', details: error.message });
   }
 });
