@@ -187,7 +187,6 @@
         </div>
       </details>
 
-      <!-- Bagian Riwayat Stok -->
       <div class="bg-white p-6 mt-6 rounded-lg shadow-md">
         <h2 class="text-xl font-semibold mb-4">Riwayat Perubahan Stok</h2>
         <div class="overflow-x-auto w-full">
@@ -216,7 +215,7 @@
         <input type="hidden" id="editId">
         <div class="mb-4">
           <label for="editProduct" class="block mb-1">Produk</label>
-          <select id="editProduct" class="w-full border p-2 rounded" disabled>
+          <select id="editProduct" class="w-full border p-2 rounded">
             <option value="Basreng 100Gr">Basreng 100Gr</option>
             <option value="Basreng 200Gr">Basreng 200Gr</option>
             <option value="Makaroni 100Gr">Makaroni 100Gr</option>
@@ -232,7 +231,7 @@
         </div>
         <div class="mb-4">
           <label for="editBranch" class="block mb-1">Cabang</label>
-          <select id="editBranch" class="w-full border p-2 rounded" disabled>
+          <select id="editBranch" class="w-full border p-2 rounded">
             <option value="Jablay 1 (Zhidan)">Jablay 1 (Zhidan)</option>
             <option value="Jablay 2 (Reyhan)">Jablay 2 (Reyhan)</option>
             <option value="Jablay 3 (Tangsel)">Jablay 3 (Tangsel)</option>
@@ -274,14 +273,14 @@
   </div>
 
   <script>
-    // Fungsi untuk mencatat riwayat perubahan stok
-
     // Fungsi untuk mengambil riwayat stok dari backend
     async function fetchStockHistory() {
       try {
+        console.log('Fetching stock history...');
         const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock/history');
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
+        console.log('Stock history fetched:', data);
         return data;
       } catch (error) {
         console.error('Error fetching stock history:', error);
@@ -292,6 +291,7 @@
 
     // Fungsi untuk menampilkan riwayat stok
     async function renderStockHistory() {
+      console.log('Rendering stock history...');
       const history = await fetchStockHistory();
       const historyTableBody = document.getElementById('stockHistoryTable');
       historyTableBody.innerHTML = '';
@@ -308,6 +308,7 @@
         `;
         historyTableBody.appendChild(row);
       });
+      console.log('Stock history rendered.');
     }
 
     // Handle submit form tambah stok
@@ -322,6 +323,8 @@
       const quantity = parseInt(document.getElementById('quantity').value);
       const branch = document.getElementById('branch').value;
 
+      console.log('Adding stock:', { product, quantity, branch });
+
       try {
         const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock', {
           method: 'POST',
@@ -334,13 +337,12 @@
           throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
         }
 
-        console.log('Stok berhasil ditambahkan:', await response.json());
-        // Tidak perlu logStockHistory di sini, backend akan menangani
+        console.log('Stock added successfully:', await response.json());
         await renderStockTables();
         await renderStockHistory();
         this.reset();
       } catch (error) {
-        console.error('Error saat menambah stok:', error);
+        console.error('Error adding stock:', error);
         alert(`Gagal menambah stok: ${error.message}`);
       } finally {
         addStockBtn.disabled = false;
@@ -348,9 +350,11 @@
     });
 
     // Handle aksi edit, hapus, dan pindah stok
-    // Handle aksi hapus stok
     document.addEventListener('click', async function(e) {
+      console.log('Click event detected:', e.target);
+
       if (e.target.classList.contains('deleteBtn')) {
+        console.log('Delete button clicked:', e.target.dataset.id);
         if (confirm('Yakin ingin menghapus stok ini?')) {
           const deleteBtn = e.target;
           if (deleteBtn.disabled) return;
@@ -359,19 +363,18 @@
           const id = deleteBtn.dataset.id;
           const stocks = await fetchStocks();
           const stock = stocks.find(item => item.id === id);
-          
+
           try {
             const response = await fetch(`https://audit-sijablay-be.vercel.app/api/stock/${id}`, {
               method: 'DELETE'
             });
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-            console.log('Stok berhasil dihapus:', id);
-            // Tidak perlu logStockHistory di sini, backend akan menangani
+            console.log('Stock deleted successfully:', id);
             await renderStockTables();
             await renderStockHistory();
           } catch (error) {
-            console.error('Error saat menghapus stok:', error);
+            console.error('Error deleting stock:', error);
             alert('Gagal menghapus stok.');
           } finally {
             deleteBtn.disabled = false;
@@ -380,6 +383,7 @@
       }
 
       if (e.target.classList.contains('deleteHistoryBtn')) {
+        console.log('Delete history button clicked:', e.target.dataset.id);
         if (confirm('Yakin ingin menghapus entri riwayat stok ini?')) {
           const deleteHistoryBtn = e.target;
           if (deleteHistoryBtn.disabled) return;
@@ -397,10 +401,10 @@
               throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
             }
 
-            console.log('Entri riwayat stok berhasil dihapus:', id);
+            console.log('Stock history entry deleted:', id);
             await renderStockHistory();
           } catch (error) {
-            console.error('Error saat menghapus riwayat stok:', error);
+            console.error('Error deleting stock history:', error);
             alert(`Gagal menghapus riwayat stok: ${error.message}`);
           } finally {
             deleteHistoryBtn.disabled = false;
@@ -409,9 +413,16 @@
       }
 
       if (e.target.classList.contains('transferBtn')) {
+        console.log('Transfer button clicked:', e.target.dataset.id);
         const id = e.target.dataset.id;
         const stocks = await fetchStocks();
         const stock = stocks.find(item => item.id === id);
+
+        if (!stock) {
+          console.error('Stock not found for ID:', id);
+          alert('Stok tidak ditemukan.');
+          return;
+        }
 
         document.getElementById('transferId').value = stock.id;
         document.getElementById('transferProduct').value = stock.product;
@@ -428,14 +439,39 @@
           }
         });
 
+        console.log('Showing transfer modal for stock:', stock);
         document.getElementById('transferModal').classList.remove('hidden');
       }
 
+      if (e.target.classList.contains('editBtn')) {
+        console.log('Edit button clicked:', e.target.dataset.id);
+        const id = e.target.dataset.id;
+        const stocks = await fetchStocks();
+        const stock = stocks.find(item => item.id === id);
+
+        if (!stock) {
+          console.error('Stock not found for ID:', id);
+          alert('Stok tidak ditemukan.');
+          return;
+        }
+
+        console.log('Filling edit form with stock:', stock);
+        document.getElementById('editId').value = stock.id;
+        document.getElementById('editProduct').value = stock.product;
+        document.getElementById('editQuantity').value = stock.quantity;
+        document.getElementById('editBranch').value = stock.branch;
+
+        console.log('Showing edit modal');
+        document.getElementById('editModal').classList.remove('hidden');
+      }
+
       if (e.target.id === 'cancelEdit') {
+        console.log('Cancel edit button clicked');
         document.getElementById('editModal').classList.add('hidden');
       }
 
       if (e.target.id === 'cancelTransfer') {
+        console.log('Cancel transfer button clicked');
         document.getElementById('transferModal').classList.add('hidden');
       }
     });
@@ -453,6 +489,8 @@
       const quantity = parseInt(document.getElementById('editQuantity').value);
       const branch = document.getElementById('editBranch').value;
 
+      console.log('Submitting edit form:', { id, product, quantity, branch });
+
       try {
         const response = await fetch(`https://audit-sijablay-be.vercel.app/api/stock/${id}`, {
           method: 'PUT',
@@ -461,13 +499,12 @@
         });
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-        console.log('Stok berhasil diedit:', id);
-        // Tidak perlu logStockHistory di sini, backend akan menangani
+        console.log('Stock edited successfully:', id);
         await renderStockTables();
         await renderStockHistory();
         document.getElementById('editModal').classList.add('hidden');
       } catch (error) {
-        console.error('Error saat mengedit stok:', error);
+        console.error('Error editing stock:', error);
         alert('Gagal mengedit stok.');
       } finally {
         saveEditBtn.disabled = false;
@@ -488,6 +525,8 @@
       const toBranch = document.getElementById('transferToBranch').value;
       const quantity = parseInt(document.getElementById('transferQuantity').value);
 
+      console.log('Submitting transfer form:', { product, quantity, fromBranch, toBranch });
+
       try {
         const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock/transfer', {
           method: 'POST',
@@ -499,13 +538,12 @@
           throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
         }
 
-        console.log('Stok berhasil dipindahkan:', { product, fromBranch, toBranch, quantity });
-        // Tidak perlu logStockHistory di sini, backend akan menangani
+        console.log('Stock transferred successfully:', { product, fromBranch, toBranch, quantity });
         await renderStockTables();
         await renderStockHistory();
         document.getElementById('transferModal').classList.add('hidden');
       } catch (error) {
-        console.error('Error saat memindahkan stok:', error);
+        console.error('Error transferring stock:', error);
         alert(`Gagal memindahkan stok: ${error.message}`);
       } finally {
         transferStockBtn.disabled = false;
@@ -514,6 +552,7 @@
 
     // Handle export ke CSV
     document.getElementById('exportCsvBtn').addEventListener('click', async function() {
+      console.log('Export CSV button clicked');
       const stocks = await fetchStocks();
       let csv = 'Produk,Cabang,Stok\n';
       stocks.forEach(stock => {
@@ -528,14 +567,17 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      console.log('CSV exported');
     });
 
     // Fungsi untuk mengambil data stok
     async function fetchStocks() {
       try {
+        console.log('Fetching stocks...');
         const response = await fetch('https://audit-sijablay-be.vercel.app/api/stock');
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
+        console.log('Stocks fetched:', data);
         return data;
       } catch (error) {
         console.error('Error fetching stocks:', error);
@@ -547,9 +589,11 @@
     // Fungsi untuk mengambil data ringkasan penjualan
     async function fetchSalesSummary() {
       try {
+        console.log('Fetching sales summary...');
         const response = await fetch('https://audit-sijablay-be.vercel.app/api/sales/summary');
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
+        console.log('Sales summary fetched:', data);
         return data;
       } catch (error) {
         console.error('Error fetching sales summary:', error);
@@ -560,18 +604,23 @@
 
     // Fungsi untuk menghitung total stok per cabang
     function calculateBranchTotal(stocks, branch) {
-      return stocks
+      const total = stocks
         .filter(stock => stock.branch === branch)
         .reduce((total, stock) => total + stock.quantity, 0);
+      console.log(`Calculated total for ${branch}:`, total);
+      return total;
     }
 
     // Fungsi untuk menghitung total stok semua cabang
     function calculateTotalStock(stocks) {
-      return stocks.reduce((total, stock) => total + stock.quantity, 0);
+      const total = stocks.reduce((total, stock) => total + stock.quantity, 0);
+      console.log('Calculated total stock:', total);
+      return total;
     }
 
     // Fungsi untuk merender tabel stok
     async function renderStockTables() {
+      console.log('Rendering stock tables...');
       const stocks = await fetchStocks();
       const salesSummary = await fetchSalesSummary();
 
@@ -674,12 +723,16 @@
         `;
         jablay3Body.appendChild(row);
       });
+
+      console.log('Stock tables rendered.');
     }
 
     // Fungsi inisialisasi
     async function init() {
+      console.log('Initializing application...');
       await renderStockTables();
       await renderStockHistory();
+      console.log('Application initialized.');
     }
     init();
   </script>
