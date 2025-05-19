@@ -139,6 +139,7 @@
         </select>
       </div>
       <div>
+        <button id="exportCSV" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Ekspor ke CSV</button>
         <button id="resetFilter" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Reset Filter</button>
       </div>
     </div>
@@ -194,15 +195,15 @@
             </th>
             <th class="p-3 cursor-pointer" data-column="status" data-sort="asc">
               Status
-              <span class="sort-indicator ml-1">⬍</span>
+              <span class="sort-indicator ml-1">⬽</span>
             </th>
             <th class="p-3 cursor-pointer" data-column="saleType" data-sort="asc">
               Tipe Penjualan
-              <span class="sort-indicator ml-1">⬍</span>
+              <span class="sort-indicator ml-1">⬽</span>
             </th>
             <th class="p-3 cursor-pointer" data-column="paymentStatus" data-sort="asc">
               Status Pembayaran
-              <span class="sort-indicator ml-1">⬍</span>
+              <span class="sort-indicator ml-1">⬽</span>
             </th>
             <th class="p-3">Aksi</th>
           </tr>
@@ -364,7 +365,6 @@
             valueB = (b.saleType || 'Tidak Diketahui').toLowerCase();
             break;
           case 'paymentStatus':
-            // Urutkan "Belum Lunas" sebelum "Lunas"
             valueA = a.paymentStatus === 'Belum Lunas' ? 0 : 1;
             valueB = b.paymentStatus === 'Belum Lunas' ? 0 : 1;
             break;
@@ -530,6 +530,8 @@
       const totalUnpaid = sortedData.filter(item => item.paymentStatus === 'Belum Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
       const totalATM = sortedData.filter(item => item.paymentMethod === 'Transfer Bank').reduce((sum, item) => sum + (item.total || 0), 0);
       const totalCash = sortedData.filter(item => item.paymentMethod === 'Cash').reduce((sum, item) => sum + (item.total || 0), 0);
+      const unpaidATM = sortedData.filter(item => item.paymentMethod === 'Transfer Bank' && item.paymentStatus === 'Belum Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
+      const unpaidCash = sortedData.filter(item => item.paymentMethod === 'Cash' && item.paymentStatus === 'Belum Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
 
       document.getElementById('totalSales').textContent = `Total Penjualan: ${formatRupiah(total)}`;
       document.getElementById('totalPaid').textContent = `Total Lunas: ${formatRupiah(totalPaid)}`;
@@ -651,6 +653,61 @@
         const price = saleTypeSelect.value === 'reseller' ? selected.getAttribute('data-reseller') : selected.getAttribute('data-price');
         unitPriceInput.value = price || '';
       }
+    }
+
+    // Fungsi untuk konversi data ke CSV
+    function convertToCSV(data) {
+      const headers = ['Tanggal', 'ID Transaksi', 'Produk', 'Cabang', 'Jumlah', 'Harga Satuan (Rp)', 'Total (Rp)', 'Metode Pembayaran', 'Status', 'Tipe Penjualan', 'Status Pembayaran'];
+      const rows = data.map(item => [
+        item.date,
+        item.id,
+        item.product,
+        item.branch,
+        item.quantity,
+        formatRupiah(item.unitPrice),
+        formatRupiah(item.total),
+        item.paymentMethod,
+        item.status,
+        item.saleType || 'Tidak Diketahui',
+        item.paymentStatus || 'Tidak Diketahui'
+      ]);
+
+      // Tambahkan ringkasan total
+      const totalATM = data.filter(item => item.paymentMethod === 'Transfer Bank').reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalCash = data.filter(item => item.paymentMethod === 'Cash').reduce((sum, item) => sum + (item.total || 0), 0);
+      const unpaidATM = data.filter(item => item.paymentMethod === 'Transfer Bank' && item.paymentStatus === 'Belum Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
+      const unpaidCash = data.filter(item => item.paymentMethod === 'Cash' && item.paymentStatus === 'Belum Lunas').reduce((sum, item) => sum + (item.total || 0), 0);
+
+      const summaryRow = [
+        '', '', '', '', '', '', '', '', '', '', '',
+        `Total Uang di ATM: ${formatRupiah(totalATM)}`,
+        `Total Uang di Cash: ${formatRupiah(totalCash)}`,
+        `Total Belum Lunas di ATM: ${formatRupiah(unpaidATM)}`,
+        `Total Belum Lunas di Cash: ${formatRupiah(unpaidCash)}`
+      ];
+
+      rows.push(summaryRow);
+
+      // Gabungkan header dan rows
+      return [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+    }
+
+    // Fungsi untuk ekspor ke CSV
+    async function exportToCSV() {
+      const sales = await fetchSales();
+      const filteredData = applyFilters(sales);
+
+      const csvContent = convertToCSV(filteredData);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const currentDate = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }).replace(/[:/]/g, '-').replace(/,\s+/g, '_');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `penjualan_${currentDate}.csv`);
+      link.click();
     }
 
     // Event listener untuk form utama
@@ -918,6 +975,11 @@
         const filteredData = applyFilters(sales);
         renderTable(filteredData);
       });
+    });
+
+    // Event listener untuk ekspor ke CSV
+    document.getElementById('exportCSV').addEventListener('click', async () => {
+      await exportToCSV();
     });
 
     // Inisialisasi
