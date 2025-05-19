@@ -497,6 +497,38 @@ app.post('/api/stock/history', async (req, res) => {
   }
 });
 
+// Endpoint: Menghapus riwayat stok
+app.delete('/api/stock/history/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const stockResult = await pool.query('SELECT * FROM stock_history WHERE id = $1', [id]);
+    const stock = stockResult.rows[0];
+    if (!stock) {
+      res.status(404).json({ error: 'Riwayat stok tidak ditemukan.' });
+      return;
+    }
+
+    try {
+      const result = await pool.query('DELETE FROM stock_history WHERE id = $1', [id]);
+      if (result.rowCount === 0) {
+        console.log('Riwayat stok tidak ditemukan:', id);
+        res.status(404).json({ error: 'Riwayat stok tidak ditemukan.' });
+        return;
+      }
+
+      console.log('Riwayat stok dihapus:', { id });
+      res.status(204).send();
+    } catch (err) {
+      console.error('Error saat menghapus riwayat stok:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  } catch (err) {
+    console.error('Error saat memeriksa riwayat stok:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Endpoint: Mendapatkan semua catatan produksi
 app.get('/api/productions', async (req, res) => {
   try {
