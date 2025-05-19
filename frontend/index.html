@@ -234,13 +234,13 @@
           <div>
             <label for="editProduct" class="block mb-1 text-sm sm:text-base">Produk</label>
             <select id="editProduct" class="w-full border p-2 rounded text-sm sm:text-base" required>
-              <option value="Basreng 100Gr">Basreng 100Gr</option>
-              <option value="Basreng 200Gr">Basreng 200Gr</option>
-              <option value="Makaroni 100Gr">Makaroni 100Gr</option>
-              <option value="Makaroni 200Gr">Makaroni 200Gr</option>
-              <option value="Keripik Kaca 50Gr">Keripik Kaca 50Gr</option>
-              <option value="Kripik Kaca 110Gr">Kripik Kaca 110Gr</option>
-              <option value="Singkong 100Gr">Singkong 100Gr</option>
+              <option value="Basreng 100Gr" data-price="10000" data-reseller="9000">Basreng 100Gr</option>
+              <option value="Basreng 200Gr" data-price="15500" data-reseller="14500">Basreng 200Gr</option>
+              <option value="Makaroni 100Gr" data-price="10000" data-reseller="9000">Makaroni 100Gr</option>
+              <option value="Makaroni 200Gr" data-price="13000" data-reseller="12000">Makaroni 200Gr</option>
+              <option value="Keripik Kaca 50Gr" data-price="8000" data-reseller="7000">Keripik Kaca 50Gr</option>
+              <option value="Kripik Kaca 110Gr" data-price="12000" data-reseller="11000">Kripik Kaca 110Gr</option>
+              <option value="Singkong 100Gr" data-price="10000" data-reseller="9000">Singkong 100Gr</option>
             </select>
           </div>
           <div>
@@ -592,19 +592,25 @@
       });
     }
 
-    // Isi harga otomatis saat produk dipilih atau tipe penjualan berubah
-    function updatePrice() {
-      const product = document.getElementById('product');
-      const saleType = document.getElementById('saleType').value;
-      const selected = product.options[product.selectedIndex];
+    // Fungsi untuk update harga berdasarkan tipe penjualan dan produk
+    function updatePrice(isEdit = false) {
+      const productSelect = isEdit ? document.getElementById('editProduct') : document.getElementById('product');
+      const saleTypeSelect = isEdit ? document.getElementById('editSaleType') : document.getElementById('saleType');
+      const unitPriceInput = isEdit ? document.getElementById('editUnitPrice') : document.getElementById('unitPrice');
+      const selected = productSelect.options[productSelect.selectedIndex];
       if (selected.value) {
-        const price = saleType === 'reseller' ? selected.getAttribute('data-reseller') : selected.getAttribute('data-price');
-        document.getElementById('unitPrice').value = price || '';
+        const price = saleTypeSelect.value === 'reseller' ? selected.getAttribute('data-reseller') : selected.getAttribute('data-price');
+        unitPriceInput.value = price || '';
       }
     }
 
-    document.getElementById('product').addEventListener('change', updatePrice);
-    document.getElementById('saleType').addEventListener('change', updatePrice);
+    // Event listener untuk form utama
+    document.getElementById('product').addEventListener('change', () => updatePrice(false));
+    document.getElementById('saleType').addEventListener('change', () => updatePrice(false));
+
+    // Event listener untuk form edit
+    document.getElementById('editProduct').addEventListener('change', () => updatePrice(true));
+    document.getElementById('editSaleType').addEventListener('change', () => updatePrice(true));
 
     // Handle submit formulir tambah dengan validasi stok
     document.getElementById('salesForm').addEventListener('submit', async function(e) {
@@ -687,11 +693,14 @@
         document.getElementById('editProduct').value = sale.product;
         document.getElementById('editBranch').value = sale.branch;
         document.getElementById('editQuantity').value = sale.quantity;
-        document.getElementById('editUnitPrice').value = sale.unitPrice;
+        document.getElementById('editUnitPrice').value = sale.unitPrice; // Set harga awal
         document.getElementById('editPaymentMethod').value = sale.paymentMethod;
         document.getElementById('editStatus').value = sale.status;
         document.getElementById('editPaymentStatus').value = sale.paymentStatus || 'Lunas';
         document.getElementById('editDescription').value = sale.description || '';
+
+        // Panggil updatePrice saat modal dibuka untuk memastikan harga sesuai
+        updatePrice(true);
 
         document.getElementById('editModal').classList.remove('hidden');
       }
