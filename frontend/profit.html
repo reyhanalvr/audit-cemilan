@@ -114,6 +114,10 @@
                   <td class="p-3 border-t">Pendapatan dari On Hand</td>
                   <td id="onhandRevenueJablay1" class="p-3 border-t text-right">Rp0</td>
                 </tr>
+                <tr>
+                  <td class="p-3 border-t">Laba Bersih</td>
+                  <td id="netProfitJablay1" class="p-3 border-t text-right">Rp0</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -145,6 +149,10 @@
                   <td class="p-3 border-t">Pendapatan dari On Hand</td>
                   <td id="onhandRevenueJablay2" class="p-3 border-t text-right">Rp0</td>
                 </tr>
+                <tr>
+                  <td class="p-3 border-t">Laba Bersih</td>
+                  <td id="netProfitJablay2" class="p-3 border-t text-right">Rp0</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -175,6 +183,10 @@
                 <tr>
                   <td class="p-3 border-t">Pendapatan dari On Hand</td>
                   <td id="onhandRevenueJablay3" class="p-3 border-t text-right">Rp0</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border-t">Laba Bersih</td>
+                  <td id="netProfitJablay3" class="p-3 border-t text-right">Rp0</td>
                 </tr>
               </tbody>
             </table>
@@ -345,20 +357,26 @@
     // Fungsi untuk menghitung dan menampilkan pendapatan per cabang
     function renderBranchRevenue(data) {
       const branchSummaries = {
-        "Jablay 1 (Zhidan)": { gross: 0, reseller: 0, onhand: 0 },
-        "Jablay 2 (Reyhan)": { gross: 0, reseller: 0, onhand: 0 },
-        "Jablay 3 (Tangsel)": { gross: 0, reseller: 0, onhand: 0 }
+        "Jablay 1 (Zhidan)": { gross: 0, reseller: 0, onhand: 0, net: 0 },
+        "Jablay 2 (Reyhan)": { gross: 0, reseller: 0, onhand: 0, net: 0 },
+        "Jablay 3 (Tangsel)": { gross: 0, reseller: 0, onhand: 0, net: 0 }
       };
 
       data.forEach(item => {
         const branch = item.branch || "Tidak Diketahui";
         if (branchSummaries.hasOwnProperty(branch)) {
           const grossRevenue = item.total || 0;
+          const costPerUnit = productionCosts[item.product] || 0;
+          const cost = costPerUnit * (item.quantity || 0);
+          const profit = grossRevenue - cost;
+
           branchSummaries[branch].gross += grossRevenue;
           if (item.saleType === 'reseller') {
             branchSummaries[branch].reseller += grossRevenue;
+            branchSummaries[branch].net += profit;
           } else if (item.saleType === 'onhand') {
             branchSummaries[branch].onhand += grossRevenue;
+            branchSummaries[branch].net += profit;
           }
         }
       });
@@ -366,14 +384,17 @@
       document.getElementById('grossRevenueJablay1').textContent = formatRupiah(branchSummaries["Jablay 1 (Zhidan)"].gross);
       document.getElementById('resellerRevenueJablay1').textContent = formatRupiah(branchSummaries["Jablay 1 (Zhidan)"].reseller);
       document.getElementById('onhandRevenueJablay1').textContent = formatRupiah(branchSummaries["Jablay 1 (Zhidan)"].onhand);
+      document.getElementById('netProfitJablay1').textContent = formatRupiah(branchSummaries["Jablay 1 (Zhidan)"].net);
 
       document.getElementById('grossRevenueJablay2').textContent = formatRupiah(branchSummaries["Jablay 2 (Reyhan)"].gross);
       document.getElementById('resellerRevenueJablay2').textContent = formatRupiah(branchSummaries["Jablay 2 (Reyhan)"].reseller);
       document.getElementById('onhandRevenueJablay2').textContent = formatRupiah(branchSummaries["Jablay 2 (Reyhan)"].onhand);
+      document.getElementById('netProfitJablay2').textContent = formatRupiah(branchSummaries["Jablay 2 (Reyhan)"].net);
 
       document.getElementById('grossRevenueJablay3').textContent = formatRupiah(branchSummaries["Jablay 3 (Tangsel)"].gross);
       document.getElementById('resellerRevenueJablay3').textContent = formatRupiah(branchSummaries["Jablay 3 (Tangsel)"].reseller);
       document.getElementById('onhandRevenueJablay3').textContent = formatRupiah(branchSummaries["Jablay 3 (Tangsel)"].onhand);
+      document.getElementById('netProfitJablay3').textContent = formatRupiah(branchSummaries["Jablay 3 (Tangsel)"].net);
     }
 
     // Fungsi untuk mengatur collapsible
