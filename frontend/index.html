@@ -510,17 +510,17 @@
 
     // Fungsi untuk filter data berdasarkan semua kriteria
     function applyFilters(sales) {
+      let filteredData = Array.isArray(sales) ? [...sales] : [];
+
       const startDate = document.getElementById('startDate').value;
       const endDate = document.getElementById('endDate').value;
       const paymentStatus = document.getElementById('paymentStatusFilter').value;
       const branchFilter = document.getElementById('branchFilter').value;
       const searchQuery = document.getElementById('search').value.toUpperCase();
 
-      let filteredData = sales;
-
       if (startDate && endDate && startDate > endDate) {
         alert('Tanggal Mulai harus sebelum Tanggal Akhir.');
-        return sales;
+        return filteredData;
       }
 
       if (startDate) filteredData = filteredData.filter(item => item.date >= startDate);
@@ -529,7 +529,8 @@
       if (branchFilter !== 'all') filteredData = filteredData.filter(item => item.branch === branchFilter);
       if (searchQuery) filteredData = filteredData.filter(item => item.id.includes(searchQuery));
 
-      if (currentLimit !== 'all') {
+      // Pastikan filteredData adalah array sebelum slice
+      if (Array.isArray(filteredData) && currentLimit !== 'all') {
         filteredData = filteredData.slice(-currentLimit);
       }
 
@@ -608,8 +609,6 @@
       document.getElementById('totalATM').textContent = `Total Uang di ATM: ${formatRupiah(totalATM)}`;
       document.getElementById('totalCash').textContent = `Total Uang di Cash: ${formatRupiah(totalCash)}`;
       document.getElementById('anomaly').textContent = '';
-
-      updateCharts(sortedData);
     }
 
     // Fungsi untuk update grafik
@@ -705,9 +704,6 @@
                   tooltipEl.style.left = leftPosition + 'px';
                   tooltipEl.style.top = topPosition + 'px';
                   tooltipEl.style.opacity = '1';
-
-                  console.log('Tooltip position - Left:', leftPosition, 'Top:', topPosition);
-                  console.log('Tooltip visibility - Opacity:', tooltipEl.style.opacity, 'Display:', tooltipEl.style.display);
                 }
               }
             }
