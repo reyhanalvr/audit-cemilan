@@ -372,6 +372,9 @@
     let isSalesChartMinimized = true;
     let isQuantityChartMinimized = true;
 
+    let salesChart;
+    let quantityChart;
+
     // Fungsi untuk mengatur tombol limit aktif
     function setActiveLimitButton(limit) {
       document.querySelectorAll('.limit-btn').forEach(btn => {
@@ -447,9 +450,6 @@
 
       return sortedData;
     }
-
-    let salesChart;
-    let quantityChart;
 
     // Buat elemen tooltip secara global sebelum chart diinisialisasi
     const tooltipEl = document.createElement('div');
@@ -529,7 +529,6 @@
       if (branchFilter !== 'all') filteredData = filteredData.filter(item => item.branch === branchFilter);
       if (searchQuery) filteredData = filteredData.filter(item => item.id.includes(searchQuery));
 
-      // Pastikan filteredData adalah array sebelum slice
       if (Array.isArray(filteredData) && currentLimit !== 'all') {
         filteredData = filteredData.slice(-currentLimit);
       }
@@ -613,13 +612,22 @@
 
     // Fungsi untuk update grafik
     function updateCharts(data) {
+      if (!Array.isArray(data) || data.length === 0) {
+        console.warn('Data untuk grafik kosong atau tidak valid:', data);
+        return;
+      }
+
       const dates = [...new Set(data.map(item => item.date))].sort();
+      if (dates.length === 0) {
+        console.warn('Tidak ada tanggal yang tersedia untuk grafik');
+        return;
+      }
 
       const totals = dates.map(date => data.filter(item => item.date === date).reduce((sum, item) => sum + (item.total || 0), 0));
       const quantities = dates.map(date => data.filter(item => item.date === date).reduce((sum, item) => sum + (item.quantity || 0), 0));
 
-      if (salesChart && !isSalesChartMinimized) {
-        salesChart.destroy();
+      if (!isSalesChartMinimized) {
+        if (salesChart) salesChart.destroy();
         const salesCtx = document.getElementById('salesChart').getContext('2d');
         salesChart = new Chart(salesCtx, {
           type: 'bar',
@@ -642,10 +650,11 @@
             }
           }
         });
+        console.log('Grafik Penjualan Harian dirender dengan data:', totals);
       }
 
-      if (quantityChart && !isQuantityChartMinimized) {
-        quantityChart.destroy();
+      if (!isQuantityChartMinimized) {
+        if (quantityChart) quantityChart.destroy();
         const quantityCtx = document.getElementById('quantityChart').getContext('2d');
         quantityChart = new Chart(quantityCtx, {
           type: 'line',
@@ -709,6 +718,7 @@
             }
           }
         });
+        console.log('Grafik Total Barang Keluar dirender dengan data:', quantities);
       }
     }
 
@@ -971,12 +981,19 @@
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderTable(filteredData);
+      // Update grafik jika sedang terbuka
+      if (!isSalesChartMinimized || !isQuantityChartMinimized) {
+        updateCharts(filteredData);
+      }
     });
 
     document.getElementById('endDate').addEventListener('change', async function() {
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderTable(filteredData);
+      if (!isSalesChartMinimized || !isQuantityChartMinimized) {
+        updateCharts(filteredData);
+      }
     });
 
     // Filter berdasarkan status pembayaran
@@ -984,6 +1001,9 @@
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderTable(filteredData);
+      if (!isSalesChartMinimized || !isQuantityChartMinimized) {
+        updateCharts(filteredData);
+      }
     });
 
     // Filter berdasarkan cabang
@@ -991,6 +1011,9 @@
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderTable(filteredData);
+      if (!isSalesChartMinimized || !isQuantityChartMinimized) {
+        updateCharts(filteredData);
+      }
     });
 
     // Pencarian berdasarkan ID Transaksi
@@ -998,6 +1021,9 @@
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderTable(filteredData);
+      if (!isSalesChartMinimized || !isQuantityChartMinimized) {
+        updateCharts(filteredData);
+      }
     });
 
     // Filter berdasarkan jumlah transaksi
@@ -1010,29 +1036,32 @@
         const sales = await fetchSales();
         const filteredData = applyFilters(sales);
         renderTable(filteredData);
+        if (!isSalesChartMinimized || !isQuantityChartMinimized) {
+          updateCharts(filteredData);
+        }
       });
     });
 
     // Toggle grafik
-    document.getElementById('toggleSalesChart').addEventListener('click', function() {
+    document.getElementById('toggleSalesChart').addEventListener('click', async function() {
       isSalesChartMinimized = !isSalesChartMinimized;
       const container = document.getElementById('salesChartContainer');
       container.classList.toggle('minimized');
       this.textContent = isSalesChartMinimized ? '+' : '-';
       if (!isSalesChartMinimized) {
-        const sales = fetchSales();
+        const sales = await fetchSales(); // Gunakan await untuk memastikan data diambil
         const filteredData = applyFilters(sales);
         updateCharts(filteredData);
       }
     });
 
-    document.getElementById('toggleQuantityChart').addEventListener('click', function() {
+    document.getElementById('toggleQuantityChart').addEventListener('click', async function() {
       isQuantityChartMinimized = !isQuantityChartMinimized;
       const container = document.getElementById('quantityChartContainer');
       container.classList.toggle('minimized');
       this.textContent = isQuantityChartMinimized ? '+' : '-';
       if (!isQuantityChartMinimized) {
-        const sales = fetchSales();
+        const sales = await fetchSales(); // Gunakan await untuk memastikan data diambil
         const filteredData = applyFilters(sales);
         updateCharts(filteredData);
       }
@@ -1051,6 +1080,9 @@
       const sales = await fetchSales();
       const filteredData = applyFilters(sales);
       renderTable(filteredData);
+      if (!isSalesChartMinimized || !isQuantityChartMinimized) {
+        updateCharts(filteredData);
+      }
     });
 
     // Event listener untuk sorting
@@ -1074,6 +1106,9 @@
         const sales = await fetchSales();
         const filteredData = applyFilters(sales);
         renderTable(filteredData);
+        if (!isSalesChartMinimized || !isQuantityChartMinimized) {
+          updateCharts(filteredData);
+        }
       });
     });
 
@@ -1088,13 +1123,6 @@
       const filteredData = applyFilters(sales);
       renderTable(filteredData);
       setActiveLimitButton(currentLimit);
-      // Grafik dimuat hanya jika tidak diminimalkan
-      if (!isSalesChartMinimized) {
-        updateCharts(filteredData);
-      }
-      if (!isQuantityChartMinimized) {
-        updateCharts(filteredData);
-      }
     }
     init();
   </script>
