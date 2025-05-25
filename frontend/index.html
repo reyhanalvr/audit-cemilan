@@ -37,6 +37,26 @@
     .limit-btn:hover:not(.active) {
       background-color: #d1d5db;
     }
+    .chart-container {
+      transition: all 0.3s ease;
+    }
+    .chart-container.minimized .chart-content {
+      display: none;
+    }
+    .chart-container .toggle-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.375rem;
+      background-color: #3b82f6;
+      color: white;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .chart-container.minimized .toggle-btn {
+      background-color: #10b981;
+    }
   </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -170,15 +190,21 @@
     </div>
     
     <!-- Grafik Penjualan Harian (Bar Chart) -->
-    <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
+    <div class="chart-container minimized bg-white p-6 mb-6 rounded-lg shadow-md relative" id="salesChartContainer">
       <h2 class="text-xl font-semibold mb-4">Grafik Penjualan Harian</h2>
-      <canvas id="salesChart" class="w-full h-64"></canvas>
+      <button class="toggle-btn" id="toggleSalesChart">+</button>
+      <div class="chart-content">
+        <canvas id="salesChart" class="w-full h-64"></canvas>
+      </div>
     </div>
 
     <!-- Grafik Barang Keluar (Line Chart) -->
-    <div class="bg-white p-6 mb-6 rounded-lg shadow-md">
+    <div class="chart-container minimized bg-white p-6 mb-6 rounded-lg shadow-md relative" id="quantityChartContainer">
       <h2 class="text-xl font-semibold mb-4">Grafik Total Barang Keluar</h2>
-      <canvas id="quantityChart" class="w-full h-64"></canvas>
+      <button class="toggle-btn" id="toggleQuantityChart">+</button>
+      <div class="chart-content">
+        <canvas id="quantityChart" class="w-full h-64"></canvas>
+      </div>
     </div>
     
     <!-- Tabel Penjualan -->
@@ -341,7 +367,10 @@
     let currentSortColumn = 'date';
     let currentSortDirection = 'asc';
     // State untuk melacak jumlah transaksi yang ditampilkan
-    let currentLimit = 10; // Default 10 transaksi
+    let currentLimit = 10;
+    // State untuk melacak status minimalkan grafik
+    let isSalesChartMinimized = true;
+    let isQuantityChartMinimized = true;
 
     // Fungsi untuk mengatur tombol limit aktif
     function setActiveLimitButton(limit) {
@@ -500,7 +529,6 @@
       if (branchFilter !== 'all') filteredData = filteredData.filter(item => item.branch === branchFilter);
       if (searchQuery) filteredData = filteredData.filter(item => item.id.includes(searchQuery));
 
-      // Terapkan limit untuk menampilkan hanya sejumlah transaksi terakhir
       if (currentLimit !== 'all') {
         filteredData = filteredData.slice(-currentLimit);
       }
@@ -522,7 +550,6 @@
       const noDataMessage = document.getElementById('noDataMessage');
       tbody.innerHTML = '';
 
-      // Terapkan sorting
       const sortedData = sortData(data, currentSortColumn, currentSortDirection);
 
       if (sortedData.length === 0) {
@@ -592,97 +619,101 @@
       const totals = dates.map(date => data.filter(item => item.date === date).reduce((sum, item) => sum + (item.total || 0), 0));
       const quantities = dates.map(date => data.filter(item => item.date === date).reduce((sum, item) => sum + (item.quantity || 0), 0));
 
-      if (salesChart) salesChart.destroy();
-      const salesCtx = document.getElementById('salesChart').getContext('2d');
-      salesChart = new Chart(salesCtx, {
-        type: 'bar',
-        data: {
-          labels: dates,
-          datasets: [{
-            label: 'Total Penjualan (Rp)',
-            data: totals,
-            backgroundColor: 'rgba(59, 130, 246, 0.5)',
-            borderColor: 'rgba(59, 130, 246, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { callback: value => formatRupiah(value) }
-            }
-          }
-        }
-      });
-
-      if (quantityChart) quantityChart.destroy();
-      const quantityCtx = document.getElementById('quantityChart').getContext('2d');
-      quantityChart = new Chart(quantityCtx, {
-        type: 'line',
-        data: {
-          labels: dates,
-          datasets: [{
-            label: 'Total Barang Keluar',
-            data: quantities,
-            fill: false,
-            borderColor: 'rgba(255, 99, 132, 1)',
-            tension: 0.1
-          }]
-        },
-        options: {
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { stepSize: 1 }
-            }
+      if (salesChart && !isSalesChartMinimized) {
+        salesChart.destroy();
+        const salesCtx = document.getElementById('salesChart').getContext('2d');
+        salesChart = new Chart(salesCtx, {
+          type: 'bar',
+          data: {
+            labels: dates,
+            datasets: [{
+              label: 'Total Penjualan (Rp)',
+              data: totals,
+              backgroundColor: 'rgba(59, 130, 246, 0.5)',
+              borderColor: 'rgba(59, 130, 246, 1)',
+              borderWidth: 1
+            }]
           },
-          plugins: {
-            tooltip: {
-              enabled: false,
-              external: function(context) {
-                const { chart, tooltip } = context;
-
-                if (!tooltipEl) {
-                  console.error('Tooltip element not found or not created.');
-                  return;
-                }
-
-                if (tooltip.opacity === 0) {
-                  tooltipEl.style.opacity = '0';
-                  return;
-                }
-
-                if (!tooltip.dataPoints || tooltip.dataPoints.length === 0) {
-                  console.warn('No tooltip data points available:', tooltip);
-                  tooltipEl.innerHTML = '<div><p>Tidak ada data untuk ditampilkan</p></div>';
-                } else {
-                  const date = tooltip.dataPoints[0].label;
-                  console.log('Tooltip triggered for date:', date, 'with data:', tooltip.dataPoints[0]);
-                  const details = getProductDetails(data, date);
-                  tooltipEl.innerHTML = `
-                    <div>
-                      <p>Total Barang: ${tooltip.dataPoints[0].raw} unit(s)</p>
-                      <p>Detail Produk:</p>
-                      ${details}
-                    </div>
-                  `;
-                }
-
-                const position = chart.canvas.getBoundingClientRect();
-                const leftPosition = position.left + tooltip.caretX;
-                const topPosition = position.top + window.scrollY + tooltip.caretY + 10;
-                tooltipEl.style.left = leftPosition + 'px';
-                tooltipEl.style.top = topPosition + 'px';
-                tooltipEl.style.opacity = '1';
-
-                console.log('Tooltip position - Left:', leftPosition, 'Top:', topPosition);
-                console.log('Tooltip visibility - Opacity:', tooltipEl.style.opacity, 'Display:', tooltipEl.style.display);
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { callback: value => formatRupiah(value) }
               }
             }
           }
-        }
-      });
+        });
+      }
+
+      if (quantityChart && !isQuantityChartMinimized) {
+        quantityChart.destroy();
+        const quantityCtx = document.getElementById('quantityChart').getContext('2d');
+        quantityChart = new Chart(quantityCtx, {
+          type: 'line',
+          data: {
+            labels: dates,
+            datasets: [{
+              label: 'Total Barang Keluar',
+              data: quantities,
+              fill: false,
+              borderColor: 'rgba(255, 99, 132, 1)',
+              tension: 0.1
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 }
+              }
+            },
+            plugins: {
+              tooltip: {
+                enabled: false,
+                external: function(context) {
+                  const { chart, tooltip } = context;
+
+                  if (!tooltipEl) {
+                    console.error('Tooltip element not found or not created.');
+                    return;
+                  }
+
+                  if (tooltip.opacity === 0) {
+                    tooltipEl.style.opacity = '0';
+                    return;
+                  }
+
+                  if (!tooltip.dataPoints || tooltip.dataPoints.length === 0) {
+                    console.warn('No tooltip data points available:', tooltip);
+                    tooltipEl.innerHTML = '<div><p>Tidak ada data untuk ditampilkan</p></div>';
+                  } else {
+                    const date = tooltip.dataPoints[0].label;
+                    console.log('Tooltip triggered for date:', date, 'with data:', tooltip.dataPoints[0]);
+                    const details = getProductDetails(data, date);
+                    tooltipEl.innerHTML = `
+                      <div>
+                        <p>Total Barang: ${tooltip.dataPoints[0].raw} unit(s)</p>
+                        <p>Detail Produk:</p>
+                        ${details}
+                      </div>
+                    `;
+                  }
+
+                  const position = chart.canvas.getBoundingClientRect();
+                  const leftPosition = position.left + tooltip.caretX;
+                  const topPosition = position.top + window.scrollY + tooltip.caretY + 10;
+                  tooltipEl.style.left = leftPosition + 'px';
+                  tooltipEl.style.top = topPosition + 'px';
+                  tooltipEl.style.opacity = '1';
+
+                  console.log('Tooltip position - Left:', leftPosition, 'Top:', topPosition);
+                  console.log('Tooltip visibility - Opacity:', tooltipEl.style.opacity, 'Display:', tooltipEl.style.display);
+                }
+              }
+            }
+          }
+        });
+      }
     }
 
     // Fungsi untuk update harga berdasarkan tipe penjualan dan produk
@@ -701,7 +732,6 @@
     function convertToCSV(data) {
       const rows = [];
 
-      // Tambahkan setiap transaksi sebagai beberapa baris
       data.forEach((item, index) => {
         if (index > 0) {
           rows.push('');
@@ -987,6 +1017,31 @@
       });
     });
 
+    // Toggle grafik
+    document.getElementById('toggleSalesChart').addEventListener('click', function() {
+      isSalesChartMinimized = !isSalesChartMinimized;
+      const container = document.getElementById('salesChartContainer');
+      container.classList.toggle('minimized');
+      this.textContent = isSalesChartMinimized ? '+' : '-';
+      if (!isSalesChartMinimized) {
+        const sales = fetchSales();
+        const filteredData = applyFilters(sales);
+        updateCharts(filteredData);
+      }
+    });
+
+    document.getElementById('toggleQuantityChart').addEventListener('click', function() {
+      isQuantityChartMinimized = !isQuantityChartMinimized;
+      const container = document.getElementById('quantityChartContainer');
+      container.classList.toggle('minimized');
+      this.textContent = isQuantityChartMinimized ? '+' : '-';
+      if (!isQuantityChartMinimized) {
+        const sales = fetchSales();
+        const filteredData = applyFilters(sales);
+        updateCharts(filteredData);
+      }
+    });
+
     // Reset semua filter
     document.getElementById('resetFilter').addEventListener('click', async function() {
       document.getElementById('startDate').value = '';
@@ -994,7 +1049,7 @@
       document.getElementById('paymentStatusFilter').value = 'all';
       document.getElementById('branchFilter').value = 'all';
       document.getElementById('search').value = '';
-      currentLimit = 10; // Reset ke default 10
+      currentLimit = 10;
       setActiveLimitButton(currentLimit);
 
       const sales = await fetchSales();
@@ -1037,6 +1092,13 @@
       const filteredData = applyFilters(sales);
       renderTable(filteredData);
       setActiveLimitButton(currentLimit);
+      // Grafik dimuat hanya jika tidak diminimalkan
+      if (!isSalesChartMinimized) {
+        updateCharts(filteredData);
+      }
+      if (!isQuantityChartMinimized) {
+        updateCharts(filteredData);
+      }
     }
     init();
   </script>
